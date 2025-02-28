@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Space</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #000;
+            overflow-x: hidden;
+        }
+
+        .nav-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-right: 2px solid #000;
+            transition: background 0.3s, transform 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .container:last-child {
+            border-right: none;
+        }
+
+        .container:hover {
+            background: #007bff;
+            transform: scale(1.05);
+            color: #fff;
+        }
+
+        .title {
+            font-size: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .container {
+                border-right: none;
+                border-bottom: 2px solid #000;
+            }
+
+            .container:last-child {
+                border-bottom: none;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            background: #f0f0f0;
+            color: #000;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!-- Navigation Boxes -->
+    <div class="nav-container">
+        <a href="about.html" class="container">
+            <div class="title">Me</div>
+        </a>
+        <a href="daily.html" class="container">
+            <div class="title">Daily</div>
+        </a>
+        <a href="knowledge.html" class="container">
+            <div class="title">∞</div>
+        </a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        &copy; 2025 Kaung Myat Thu. All Rights Reserved.
+    </div>
+</body>
+
+</html>

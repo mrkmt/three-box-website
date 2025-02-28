@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Updates</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #000;
+            text-align: center;
+        }
+
+        .container {
+            padding: 50px;
+        }
+
+        .markdown-container {
+            text-align: left;
+            max-width: 800px;
+            margin: 20px auto;
+            line-height: 1.8;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .back-btn:hover {
+            background: #0056b3;
+        }
+
+        select {
+            padding: 10px;
+            margin: 20px;
+            border: 1px solid #000;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Daily Updates</h1>
+
+        <!-- Dropdown to Select Markdown Files -->
+        <label for="file-selector">Select a daily note:</label>
+        <select id="file-selector" onchange="loadMarkdown()">
+            <option value="daily1.md">Daily 1</option>
+            <option value="daily2.md">Daily 2</option>
+            <option value="daily3.md">Daily 3</option>
+        </select>
+
+        <!-- Container to Display Markdown Content -->
+        <div id="markdown-content" class="markdown-container">Select a note to view.</div>
+
+        <a href="index.html" class="back-btn">Back to Home</a>
+    </div>
+
+    <script>
+        // Load and render the selected Markdown file
+        async function loadMarkdown() {
+            const selector = document.getElementById('file-selector');
+            const selectedFile = selector.value;
+            const content = document.getElementById('markdown-content');
+
+            try {
+                const response = await fetch(selectedFile);
+                if (!response.ok) throw new Error('File not found');
+                const markdownText = await response.text();
+                content.innerHTML = marked.parse(markdownText);
+            } catch (error) {
+                content.innerHTML = "Error loading the file.";
+            }
+        }
+
+        // Load the first note by default
+        loadMarkdown();
+    </script>
+
+</body>
+
+</html>
