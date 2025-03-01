@@ -4,22 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Myanmar Monthly Income Tax Calculator</title>
-    <link rel="stylesheet" href="../css/style2.css">
+    <title>Myanmar Income Tax Calculator (Monthly Adjustments)</title>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 
 <body>
 
     <div class="container">
-        <h1>Myanmar Monthly Income Tax Calculator</h1>
+        <h1>Myanmar Income Tax Calculator (Monthly Adjustments)</h1>
 
-        <!-- Monthly Salary -->
-        <label for="monthly-income">Monthly Salary (MMK):</label>
-        <input type="number" id="monthly-income" placeholder="Enter monthly salary" required>
-
-        <!-- Months Worked (April to March) -->
-        <label for="months">Number of Months Worked (April-March):</label>
-        <input type="number" id="months" placeholder="e.g., 12" min="1" max="12" required>
+        <!-- Monthly Salary Inputs (April to March) -->
+        <h2>Enter Salary for Each Month:</h2>
+        <div id="monthly-salary-inputs"></div>
 
         <!-- Spouse -->
         <label for="spouse">Spouse (Yes/No):</label>
@@ -36,52 +32,68 @@
         <label for="parents">Number of Parents (Living with you):</label>
         <input type="number" id="parents" placeholder="Enter number of parents" min="0">
 
-        <!-- SSB & Insurance -->
+        <!-- SSB & Insurance (Monthly) -->
         <label for="ssb">Monthly SSB & Insurance Deduction (MMK):</label>
         <input type="number" id="ssb" placeholder="Enter SSB amount" min="0">
 
+        <!-- Calculate Button -->
         <button onclick="calculateTax()">Calculate Tax</button>
 
-        <!-- Results -->
+        <!-- Result -->
         <h2>Tax Calculation Result</h2>
         <div id="result">Your tax amount will be displayed here.</div>
 
-        <!-- Back Button -->
+        <!-- Back to Home -->
         <a href="../index.html" class="back-btn">Back to Home</a>
     </div>
 
     <script>
+        // Generate monthly salary fields for April to March
+        const months = [
+            "April", "May", "June", "July", "August", "September",
+            "October", "November", "December", "January", "February", "March"
+        ];
+
+        const container = document.getElementById('monthly-salary-inputs');
+
+        months.forEach((month, index) => {
+            const input = document.createElement('div');
+            input.innerHTML = `
+                <label for="month-${index + 1}">${month} (MMK):</label>
+                <input type="number" id="month-${index + 1}" placeholder="Enter salary" min="0">
+            `;
+            container.appendChild(input);
+        });
+
         function calculateTax() {
-            // Input Values
-            let monthlyIncome = parseFloat(document.getElementById('monthly-income').value) || 0;
-            let months = parseInt(document.getElementById('months').value) || 12; // Default to 12 months
+            // Collect salary for each month (April to March)
+            let monthlyIncomes = [];
+            for (let i = 1; i <= 12; i++) {
+                let salary = parseFloat(document.getElementById(`month-${i}`).value) || 0;
+                monthlyIncomes.push(salary);
+            }
+
+            // Input values for allowances
             let spouseAllowance = parseFloat(document.getElementById('spouse').value);
             let children = parseInt(document.getElementById('children').value) || 0;
             let parents = parseInt(document.getElementById('parents').value) || 0;
             let ssb = parseFloat(document.getElementById('ssb').value) || 0;
 
-            // Ensure valid input
-            if (months < 1 || months > 12) {
-                alert("Months worked must be between 1 and 12.");
-                return;
-            }
+            // Calculate annual salary and SSB
+            let annualIncome = monthlyIncomes.reduce((a, b) => a + b, 0);
+            let annualSSB = ssb * 12;
 
-            // Annual Income Calculation
-            let annualIncome = monthlyIncome * months;
-
-            // Allowances Calculation (Annual Basis)
+            // Allowances Calculation
             let childAllowance = children * 500000;
             let parentAllowance = parents * 1000000;
-            let annualSSB = ssb * months;
 
             let totalAllowances = spouseAllowance + childAllowance + parentAllowance + annualSSB;
 
-            // Taxable Income (Annual Basis)
+            // Taxable Income Calculation (Annual Basis)
             let taxableIncome = Math.max(annualIncome - totalAllowances, 0);
 
             // Tax Calculation (Myanmar Annual Tax Brackets)
             let tax = 0;
-
             if (taxableIncome > 4800000) {
                 let taxable = taxableIncome - 4800000;
 
@@ -101,12 +113,15 @@
             }
 
             // Monthly Tax Calculation
-            let monthlyTax = tax / months;
+            let monthlyTax = tax / 12;
 
             // Display Result
             document.getElementById('result').innerHTML = `
+                <p><strong>Total Annual Salary:</strong> ${annualIncome.toLocaleString()} MMK</p>
+                <p><strong>Total Allowances:</strong> ${totalAllowances.toLocaleString()} MMK</p>
+                <p><strong>Taxable Income:</strong> ${taxableIncome.toLocaleString()} MMK</p>
                 <p><strong>Annual Tax:</strong> ${tax.toLocaleString()} MMK</p>
-                <p><strong>Monthly Tax:</strong> ${monthlyTax.toLocaleString()} MMK</p>
+                <p><strong>Monthly Tax (Approx):</strong> ${monthlyTax.toLocaleString()} MMK</p>
             `;
         }
     </script>
