@@ -5,9 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Myanmar Income Tax Calculator (Monthly Adjustments)</title>
-    <link rel="stylesheet" href="../css/style2.css">
     <style>
-        /* Modern, Clean, and Responsive Styling */
+        /* Modern UI Styles */
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
@@ -15,7 +14,6 @@
             box-sizing: border-box;
             background: linear-gradient(135deg, #1e3c72, #2a5298);
             color: #fff;
-            line-height: 1.6;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -23,10 +21,10 @@
         }
 
         .container {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             border-radius: 16px;
             padding: 40px 30px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             max-width: 900px;
             width: 100%;
             animation: fadeIn 0.5s ease-in-out;
@@ -147,7 +145,6 @@
 
         <!-- Buttons -->
         <button onclick="calculateTax()">🧮 Calculate Tax</button>
-        <button onclick="downloadResult()">⬇️ Download Calculation</button>
 
         <!-- Result -->
         <h2>📊 Tax Calculation Result</h2>
@@ -158,7 +155,7 @@
     </div>
 
     <script>
-        // Generate monthly salary fields for April to March
+        // Generate salary input fields (April to March)
         const months = [
             "April", "May", "June", "July", "August", "September",
             "October", "November", "December", "January", "February", "March"
@@ -190,35 +187,31 @@
             let annualIncome = monthlyIncomes.reduce((a, b) => a + b, 0);
             let annualSSB = ssb * 12;
 
-            let totalAllowances = spouseAllowance + children * 500000 + parents * 1000000 + annualSSB;
-            let taxableIncome = Math.max(annualIncome - totalAllowances, 0);
-            let tax = 0;
+            // Allowances
+            let totalAllowances = spouseAllowance + (children * 500000) + (parents * 1000000) + annualSSB;
 
+            // Apply 20% Basic Allowance
+            let taxableIncomeBeforeDeduction = Math.max(annualIncome - totalAllowances, 0);
+            let basicAllowance = taxableIncomeBeforeDeduction * 0.20;
+            let taxableIncome = Math.max(taxableIncomeBeforeDeduction - basicAllowance, 0);
+
+            // Calculate Tax
+            let tax = 0;
             if (taxableIncome > 4800000) {
-                let taxable = taxableIncome - 4800000;
-                if (taxable <= 2000000) tax += 0;
-                else if (taxable <= 10000000) tax += (taxable - 2000000) * 0.05;
-                else if (taxable <= 30000000) tax += (taxable - 10000000) * 0.10 + 400000;
-                else tax += (taxable - 30000000) * 0.15 + 2400000;
+                let excess = taxableIncome - 4800000;
+                if (excess <= 2000000) tax += 0;
+                else if (excess <= 10000000) tax += (excess - 2000000) * 0.05;
+                else if (excess <= 30000000) tax += (excess - 10000000) * 0.10 + 400000;
+                else tax += (excess - 30000000) * 0.15 + 2400000;
             }
 
-            document.getElementById('result').innerHTML = `
+            // Display Result
+            document.getElementById('result').innerText = `
                 Total Annual Salary: ${annualIncome.toLocaleString()} MMK
-                Total Allowances: ${totalAllowances.toLocaleString()} MMK
                 Taxable Income: ${taxableIncome.toLocaleString()} MMK
                 Annual Tax: ${tax.toLocaleString()} MMK
-                Monthly Tax (Approx): ${(tax / 12).toLocaleString()} MMK
+                Monthly Tax: ${(tax / 12).toLocaleString()} MMK
             `;
-        }
-
-        function downloadResult() {
-            const resultText = document.getElementById('result').innerText;
-            const blob = new Blob([resultText], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'tax-calculation.txt';
-            a.click();
         }
     </script>
 
