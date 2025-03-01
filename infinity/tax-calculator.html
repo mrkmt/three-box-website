@@ -6,46 +6,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Myanmar Income Tax Calculator (Monthly Adjustments)</title>
     <link rel="stylesheet" href="../css/style2.css">
+    <style>
+        /* Modern, Clean, and Responsive Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #fff;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 16px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            color: #4db8ff;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            border-bottom: 2px solid #4db8ff;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin: 12px 0 5px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 10px #4db8ff;
+        }
+
+        button {
+            background: #4db8ff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #368bd6;
+        }
+
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            white-space: pre-line;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #4db8ff;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        .back-btn:hover {
+            color: #ffffff;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
 
 <body>
 
     <div class="container">
-        <h1>Myanmar Income Tax Calculator (Monthly Adjustments)</h1>
+        <h1>🇲🇲 Myanmar Income Tax Calculator</h1>
 
         <!-- Monthly Salary Inputs (April to March) -->
-        <h2>Enter Salary for Each Month:</h2>
+        <h2>📅 Monthly Salary (April to March)</h2>
         <div id="monthly-salary-inputs"></div>
 
         <!-- Spouse -->
-        <label for="spouse">Spouse (Yes/No):</label>
+        <label for="spouse">👫 Spouse (Yes/No):</label>
         <select id="spouse">
             <option value="0">No</option>
             <option value="1000000">Yes</option>
         </select>
 
         <!-- Number of Children -->
-        <label for="children">Number of Children:</label>
+        <label for="children">👶 Number of Children:</label>
         <input type="number" id="children" placeholder="Enter number of children" min="0">
 
         <!-- Number of Parents -->
-        <label for="parents">Number of Parents (Living with you):</label>
+        <label for="parents">👵 Number of Parents (Living with you):</label>
         <input type="number" id="parents" placeholder="Enter number of parents" min="0">
 
         <!-- SSB & Insurance (Monthly) -->
-        <label for="ssb">Monthly SSB & Insurance Deduction (MMK):</label>
+        <label for="ssb">💼 Monthly SSB & Insurance (MMK):</label>
         <input type="number" id="ssb" placeholder="Enter SSB amount" min="0">
 
         <!-- Buttons -->
-        <button onclick="calculateTax()">Calculate Tax</button>
-        <button onclick="downloadResult()">Download Calculation</button>
+        <button onclick="calculateTax()">🧮 Calculate Tax</button>
+        <button onclick="downloadResult()">⬇️ Download Calculation</button>
 
         <!-- Result -->
-        <h2>Tax Calculation Result</h2>
+        <h2>📊 Tax Calculation Result</h2>
         <div id="result">Your tax amount will be displayed here.</div>
 
         <!-- Back to Home -->
-        <a href="../index.html" class="back-btn">Back to Home</a>
+        <a href="../index.html" class="back-btn">⬅️ Back to Home</a>
     </div>
 
     <script>
@@ -67,82 +176,49 @@
         });
 
         function calculateTax() {
-            // Collect salary for each month (April to March)
             let monthlyIncomes = [];
             for (let i = 1; i <= 12; i++) {
                 let salary = parseFloat(document.getElementById(`month-${i}`).value) || 0;
                 monthlyIncomes.push(salary);
             }
 
-            // Input values for allowances
             let spouseAllowance = parseFloat(document.getElementById('spouse').value);
             let children = parseInt(document.getElementById('children').value) || 0;
             let parents = parseInt(document.getElementById('parents').value) || 0;
             let ssb = parseFloat(document.getElementById('ssb').value) || 0;
 
-            // Calculate annual salary and SSB
             let annualIncome = monthlyIncomes.reduce((a, b) => a + b, 0);
             let annualSSB = ssb * 12;
 
-            // Allowances Calculation
-            let childAllowance = children * 500000;
-            let parentAllowance = parents * 1000000;
-
-            let totalAllowances = spouseAllowance + childAllowance + parentAllowance + annualSSB;
-
-            // Taxable Income Calculation (Annual Basis)
+            let totalAllowances = spouseAllowance + children * 500000 + parents * 1000000 + annualSSB;
             let taxableIncome = Math.max(annualIncome - totalAllowances, 0);
-
-            // Tax Calculation (Myanmar Annual Tax Brackets)
             let tax = 0;
+
             if (taxableIncome > 4800000) {
                 let taxable = taxableIncome - 4800000;
-
-                if (taxable <= 2000000) {
-                    tax += taxable * 0;
-                } else if (taxable <= 10000000) {
-                    tax += (Math.min(taxable, 10000000) - 2000000) * 0.05;
-                } else if (taxable <= 30000000) {
-                    tax += (Math.min(taxable, 30000000) - 10000000) * 0.10 + 400000;
-                } else if (taxable <= 50000000) {
-                    tax += (Math.min(taxable, 50000000) - 30000000) * 0.15 + 2400000;
-                } else if (taxable <= 70000000) {
-                    tax += (Math.min(taxable, 70000000) - 50000000) * 0.20 + 5400000;
-                } else {
-                    tax += (taxable - 70000000) * 0.25 + 9400000;
-                }
+                if (taxable <= 2000000) tax += 0;
+                else if (taxable <= 10000000) tax += (taxable - 2000000) * 0.05;
+                else if (taxable <= 30000000) tax += (taxable - 10000000) * 0.10 + 400000;
+                else tax += (taxable - 30000000) * 0.15 + 2400000;
             }
 
-            // Monthly Tax Calculation
-            let monthlyTax = tax / 12;
-
-            // Display Result
-            const resultText = `
-                <p><strong>Total Annual Salary:</strong> ${annualIncome.toLocaleString()} MMK</p>
-                <p><strong>Total Allowances:</strong> ${totalAllowances.toLocaleString()} MMK</p>
-                <p><strong>Taxable Income:</strong> ${taxableIncome.toLocaleString()} MMK</p>
-                <p><strong>Annual Tax:</strong> ${tax.toLocaleString()} MMK</p>
-                <p><strong>Monthly Tax (Approx):</strong> ${monthlyTax.toLocaleString()} MMK</p>
+            document.getElementById('result').innerHTML = `
+                Total Annual Salary: ${annualIncome.toLocaleString()} MMK
+                Total Allowances: ${totalAllowances.toLocaleString()} MMK
+                Taxable Income: ${taxableIncome.toLocaleString()} MMK
+                Annual Tax: ${tax.toLocaleString()} MMK
+                Monthly Tax (Approx): ${(tax / 12).toLocaleString()} MMK
             `;
-
-            document.getElementById('result').innerHTML = resultText;
-
-            // Return the result text for downloading
-            return resultText.replace(/<[^>]*>/g, '');
         }
 
-        // Download Calculation as a .txt file
         function downloadResult() {
-            const resultText = calculateTax();
+            const resultText = document.getElementById('result').innerText;
             const blob = new Blob([resultText], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = 'tax-calculation.txt';
-            document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         }
     </script>
 
