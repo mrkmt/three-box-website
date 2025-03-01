@@ -55,3 +55,29 @@ footer {
 .back-link:hover {
     text-decoration: underline;
 }
+/* Ensure button is centered and responsive */
+.back-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 20px 0;
+    text-align: center;
+    text-decoration: none;
+    color: white;
+    background-color: #007BFF; /* Blue color */
+    border-radius: 8px; /* Rounded corners */
+    transition: background 0.3s ease; /* Smooth hover effect */
+}
+
+/* Hover effect */
+.back-btn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Responsive - Center on small screens */
+@media (max-width: 600px) {
+    .back-btn {
+        width: 80%;
+        display: block;
+        margin: 20px auto; /* Center horizontally */
+    }
+}

@@ -2,86 +2,112 @@
 <html lang="en">
 
 <head>
-    <title>Myanmar Income Tax Calculator | Infinity Box</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myanmar Income Tax Calculator</title>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 
 <body>
-    <header>
-        <a href="../index.html" class="back-link">← Back to Infinity</a>
-        <h1>Myanmar Income Tax Calculator (2024)</h1>
-    </header>
+    <div class="container">
+        <h1>Myanmar Income Tax Calculator (April - March)</h1>
 
-    <main>
-        <label for="income">Enter Annual Income (Kyats):</label>
-        <input type="number" id="income" placeholder="Enter amount..." required>
-        <button onclick="calculateTax()">Calculate Tax</button>
+        <!-- Income Input -->
+        <form id="tax-form">
+            <h3>Enter your monthly income (April to March):</h3>
 
-        <h2 id="result"></h2>
-        <button id="downloadBtn" style="display: none;" onclick="downloadResult()">Download Result</button>
-    </main>
+            <div id="monthly-inputs"></div>
 
-    <footer>
-        <p>© 2025 Infinity Box – Myanmar Tax Calculator</p>
-    </footer>
+            <button type="button" onclick="calculateTax()">Calculate Tax</button>
+        </form>
+
+        <!-- Tax Result -->
+        <div id="result" class="result-container"></div>
+
+        <!-- Download Button -->
+        <button id="download-btn" style="display: none;" onclick="downloadResult()">Download Result</button>
+
+        <a href="../knowledge.html" class="back-btn">Back to Knowledge</a>
+    </div>
 
     <script>
+        // Generate input fields for 12 months (April - March)
+        const monthlyInputs = document.getElementById('monthly-inputs');
+        const months = [
+            "April", "May", "June", "July", "August", "September",
+            "October", "November", "December", "January", "February", "March"
+        ];
+
+        months.forEach((month, index) => {
+            monthlyInputs.innerHTML += `
+                <label>${month}:</label>
+                <input type="number" id="month-${index}" placeholder="Enter ${month} income" required><br>
+            `;
+        });
+
+        // Myanmar Income Tax Calculation
         function calculateTax() {
-            const income = parseFloat(document.getElementById("income").value);
+            const monthlyIncomes = months.map((_, i) => parseFloat(document.getElementById(`month-${i}`).value) || 0);
+            const annualIncome = monthlyIncomes.reduce((a, b) => a + b, 0);
             let tax = 0;
 
-            if (income <= 4800000) {
-                document.getElementById("result").innerText = `No tax: Income below 4.8 million kyats is tax-free.`;
-                return;
+            if (annualIncome > 4800000) {
+                const taxableIncome = annualIncome; 
+
+                const taxBrackets = [
+                    { limit: 2000000, rate: 0 },
+                    { limit: 10000000, rate: 0.05 },
+                    { limit: 30000000, rate: 0.10 },
+                    { limit: 50000000, rate: 0.15 },
+                    { limit: 70000000, rate: 0.20 },
+                    { limit: Infinity, rate: 0.25 },
+                ];
+
+                let remainingIncome = taxableIncome;
+
+                for (const bracket of taxBrackets) {
+                    if (remainingIncome <= 0) break;
+                    const amountInBracket = Math.min(remainingIncome, bracket.limit);
+                    tax += amountInBracket * bracket.rate;
+                    remainingIncome -= bracket.limit;
+                }
             }
 
-            const taxableIncome = income - 4800000;
-
-            if (taxableIncome > 70000000) {
-                tax += (taxableIncome - 70000000) * 0.25;
-                tax += 20000000 * 0.20;
-                tax += 20000000 * 0.15;
-                tax += 20000000 * 0.10;
-                tax += 8000000 * 0.05;
-            } else if (taxableIncome > 50000000) {
-                tax += (taxableIncome - 50000000) * 0.20;
-                tax += 20000000 * 0.15;
-                tax += 20000000 * 0.10;
-                tax += 8000000 * 0.05;
-            } else if (taxableIncome > 30000000) {
-                tax += (taxableIncome - 30000000) * 0.15;
-                tax += 20000000 * 0.10;
-                tax += 8000000 * 0.05;
-            } else if (taxableIncome > 10000000) {
-                tax += (taxableIncome - 10000000) * 0.10;
-                tax += 8000000 * 0.05;
-            } else if (taxableIncome > 2000000) {
-                tax += (taxableIncome - 2000000) * 0.05;
-            }
-
-            document.getElementById("result").innerText = `Annual Tax: ${tax.toLocaleString()} Kyats`;
-            document.getElementById("downloadBtn").style.display = "inline-block";
+            displayResult(annualIncome, tax);
         }
 
+        // Display Tax Calculation Result
+        function displayResult(income, tax) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <h3>Tax Calculation Result:</h3>
+                <p>Annual Income: ${income.toLocaleString()} Kyats</p>
+                <p>Estimated Tax: ${tax.toLocaleString()} Kyats</p>
+            `;
+
+            document.getElementById('download-btn').style.display = 'block';
+        }
+
+        // Download Tax Report as a Text File
         function downloadResult() {
-            const income = document.getElementById("income").value;
-            const resultText = document.getElementById("result").innerText;
-            const content = `Myanmar Income Tax Calculation\n\nAnnual Income: ${income} Kyats\n${resultText}`;
+            const income = months.map((_, i) => document.getElementById(`month-${i}`).value || 0);
+            const totalIncome = income.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            const result = document.getElementById('result').textContent;
 
-            const blob = new Blob([content], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
+            const content = `Myanmar Income Tax Report (April to March)
+------------------------------------
+Monthly Incomes:
+${months.map((m, i) => `${m}: ${income[i]} Kyats`).join("\n")}
+------------------------------------
+${result}`;
 
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "Myanmar_Income_Tax_Result.txt";
-            document.body.appendChild(a);
-            a.click();
-
-            URL.revokeObjectURL(url);
-            a.remove();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'income_tax_report.txt';
+            link.click();
         }
     </script>
-
 </body>
 
 </html>
