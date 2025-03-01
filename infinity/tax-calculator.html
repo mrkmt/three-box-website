@@ -1,61 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Myanmar Income Tax Calculator</title>
+    <title>Myanmar Monthly Income Tax Calculator</title>
     <link rel="stylesheet" href="../css/style2.css">
 </head>
+
 <body>
 
     <div class="container">
-        <h1>Myanmar Income Tax Calculator</h1>
+        <h1>Myanmar Monthly Income Tax Calculator</h1>
 
-        <label for="income">Annual Salary (MMK):</label>
-        <input type="number" id="income" placeholder="Enter annual salary" required>
+        <!-- Monthly Salary -->
+        <label for="monthly-income">Monthly Salary (MMK):</label>
+        <input type="number" id="monthly-income" placeholder="Enter monthly salary" required>
 
+        <!-- Months Worked (April to March) -->
+        <label for="months">Number of Months Worked (April-March):</label>
+        <input type="number" id="months" placeholder="e.g., 12" min="1" max="12" required>
+
+        <!-- Spouse -->
         <label for="spouse">Spouse (Yes/No):</label>
         <select id="spouse">
             <option value="0">No</option>
             <option value="1000000">Yes</option>
         </select>
 
+        <!-- Number of Children -->
         <label for="children">Number of Children:</label>
         <input type="number" id="children" placeholder="Enter number of children" min="0">
 
+        <!-- Number of Parents -->
         <label for="parents">Number of Parents (Living with you):</label>
         <input type="number" id="parents" placeholder="Enter number of parents" min="0">
 
-        <label for="ssb">SSB & Insurance Deduction (MMK):</label>
+        <!-- SSB & Insurance -->
+        <label for="ssb">Monthly SSB & Insurance Deduction (MMK):</label>
         <input type="number" id="ssb" placeholder="Enter SSB amount" min="0">
 
         <button onclick="calculateTax()">Calculate Tax</button>
 
+        <!-- Results -->
         <h2>Tax Calculation Result</h2>
         <div id="result">Your tax amount will be displayed here.</div>
 
+        <!-- Back Button -->
         <a href="../index.html" class="back-btn">Back to Home</a>
     </div>
 
     <script>
         function calculateTax() {
-            let income = parseFloat(document.getElementById('income').value) || 0;
+            // Input Values
+            let monthlyIncome = parseFloat(document.getElementById('monthly-income').value) || 0;
+            let months = parseInt(document.getElementById('months').value) || 12; // Default to 12 months
             let spouseAllowance = parseFloat(document.getElementById('spouse').value);
             let children = parseInt(document.getElementById('children').value) || 0;
             let parents = parseInt(document.getElementById('parents').value) || 0;
             let ssb = parseFloat(document.getElementById('ssb').value) || 0;
 
-            // Calculate total allowance
+            // Ensure valid input
+            if (months < 1 || months > 12) {
+                alert("Months worked must be between 1 and 12.");
+                return;
+            }
+
+            // Annual Income Calculation
+            let annualIncome = monthlyIncome * months;
+
+            // Allowances Calculation (Annual Basis)
             let childAllowance = children * 500000;
             let parentAllowance = parents * 1000000;
-            let totalAllowances = spouseAllowance + childAllowance + parentAllowance + ssb;
+            let annualSSB = ssb * months;
 
-            // Taxable Income
-            let taxableIncome = Math.max(income - totalAllowances, 0);
-            
+            let totalAllowances = spouseAllowance + childAllowance + parentAllowance + annualSSB;
+
+            // Taxable Income (Annual Basis)
+            let taxableIncome = Math.max(annualIncome - totalAllowances, 0);
+
+            // Tax Calculation (Myanmar Annual Tax Brackets)
             let tax = 0;
+
             if (taxableIncome > 4800000) {
                 let taxable = taxableIncome - 4800000;
+
                 if (taxable <= 2000000) {
                     tax += taxable * 0;
                 } else if (taxable <= 10000000) {
@@ -71,9 +100,17 @@
                 }
             }
 
-            document.getElementById('result').innerHTML = `<p>Your annual tax is <strong>${tax.toLocaleString()} MMK</strong></p>`;
+            // Monthly Tax Calculation
+            let monthlyTax = tax / months;
+
+            // Display Result
+            document.getElementById('result').innerHTML = `
+                <p><strong>Annual Tax:</strong> ${tax.toLocaleString()} MMK</p>
+                <p><strong>Monthly Tax:</strong> ${monthlyTax.toLocaleString()} MMK</p>
+            `;
         }
     </script>
 
 </body>
+
 </html>
