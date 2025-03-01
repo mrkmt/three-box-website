@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Myanmar Income Tax Calculator | Infinity Box</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <a href="../index.html" class="back-link">← Back to Infinity</a>
+        <h1>Myanmar Income Tax Calculator (2024)</h1>
+    </header>
+
+    <main>
+        <label for="income">Enter Annual Income (Kyats):</label>
+        <input type="number" id="income" placeholder="Enter amount..." required>
+        <button onclick="calculateTax()">Calculate Tax</button>
+
+        <h2 id="result"></h2>
+        <button id="downloadBtn" style="display: none;" onclick="downloadResult()">Download Result</button>
+    </main>
+
+    <footer>
+        <p>© 2025 Infinity Box – Myanmar Tax Calculator</p>
+    </footer>
+
+    <script>
+        function calculateTax() {
+            const income = parseFloat(document.getElementById("income").value);
+            let tax = 0;
+
+            if (income <= 4800000) {
+                document.getElementById("result").innerText = `No tax: Income below 4.8 million kyats is tax-free.`;
+                return;
+            }
+
+            const taxableIncome = income - 4800000;
+
+            if (taxableIncome > 70000000) {
+                tax += (taxableIncome - 70000000) * 0.25;
+                tax += 20000000 * 0.20;
+                tax += 20000000 * 0.15;
+                tax += 20000000 * 0.10;
+                tax += 8000000 * 0.05;
+            } else if (taxableIncome > 50000000) {
+                tax += (taxableIncome - 50000000) * 0.20;
+                tax += 20000000 * 0.15;
+                tax += 20000000 * 0.10;
+                tax += 8000000 * 0.05;
+            } else if (taxableIncome > 30000000) {
+                tax += (taxableIncome - 30000000) * 0.15;
+                tax += 20000000 * 0.10;
+                tax += 8000000 * 0.05;
+            } else if (taxableIncome > 10000000) {
+                tax += (taxableIncome - 10000000) * 0.10;
+                tax += 8000000 * 0.05;
+            } else if (taxableIncome > 2000000) {
+                tax += (taxableIncome - 2000000) * 0.05;
+            }
+
+            document.getElementById("result").innerText = `Annual Tax: ${tax.toLocaleString()} Kyats`;
+            document.getElementById("downloadBtn").style.display = "inline-block";
+        }
+
+        function downloadResult() {
+            const income = document.getElementById("income").value;
+            const resultText = document.getElementById("result").innerText;
+            const content = `Myanmar Income Tax Calculation\n\nAnnual Income: ${income} Kyats\n${resultText}`;
+
+            const blob = new Blob([content], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Myanmar_Income_Tax_Result.txt";
+            document.body.appendChild(a);
+            a.click();
+
+            URL.revokeObjectURL(url);
+            a.remove();
+        }
+    </script>
+
+</body>
+
+</html>
