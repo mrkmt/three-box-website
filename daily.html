@@ -7,65 +7,33 @@
     <title>My Space</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>Daily Updates</h1>
+    <h1>∞ Knowledge Sharing</h1>
+    <ul id="markdown-list" class="markdown-list"></ul>
 
-        <!-- Dropdown to Select Markdown Files -->
-        <label for="file-selector">Select a daily note:</label>
-        <select id="file-selector" onchange="loadMarkdown()">
-            <option value="daily1.md">Daily 1</option>
-            <option value="daily2.md">Daily 2</option>
-            <option value="daily3.md">Daily 3</option>
-        </select>
-
-        <!-- File Upload for Markdown Files -->
-        <label for="file-upload">Upload a Markdown file:</label>
-        <input type="file" id="file-upload" accept=".md" onchange="handleFileUpload()">
-
-        <!-- Container to Display Markdown Content -->
-        <div id="markdown-content" class="markdown-container">Select or upload a note to view.</div>
-
-        <a href="index.html" class="back-btn">Back to Home</a>
-    </div>
+    <a href="index.html" class="back-link">← Back to Home</a>
 
     <script>
-        // Load and render the selected Markdown file
-        async function loadMarkdown() {
-            const selector = document.getElementById('file-selector');
-            const selectedFile = selector.value;
-            const content = document.getElementById('markdown-content');
+        // List of markdown files (add new files here when uploaded)
+        const markdownFiles = [
+            'daily1.md',
+            'daily2.md',
+            'daily3.md'
+        ];
 
-            try {
-                const response = await fetch(selectedFile);
-                if (!response.ok) throw new Error('File not found');
-                const markdownText = await response.text();
-                content.innerHTML = marked.parse(markdownText);
-            } catch (error) {
-                content.innerHTML = "Error loading the file.";
-            }
-        }
+        const markdownList = document.getElementById('markdown-list');
 
-        // Handle Markdown File Upload
-        function handleFileUpload() {
-            const fileInput = document.getElementById('file-upload');
-            const content = document.getElementById('markdown-content');
-
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            // Read the uploaded file
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                content.innerHTML = marked.parse(event.target.result);
-            };
-            reader.readAsText(file);
-        }
-
-        // Load the first note by default
-        loadMarkdown();
+        // Dynamically create links for each markdown file
+        markdownFiles.forEach(file => {
+            const listItem = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `markdown/${file}`;
+            link.textContent = file.replace('.md', '');
+            listItem.appendChild(link);
+            markdownList.appendChild(listItem);
+        });
     </script>
-
 </body>
 
 </html>
