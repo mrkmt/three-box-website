@@ -1,113 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Myanmar Income Tax Calculator</title>
     <link rel="stylesheet" href="../css/style2.css">
 </head>
-
 <body>
+
     <div class="container">
-        <h1>Myanmar Income Tax Calculator (April - March)</h1>
+        <h1>Myanmar Income Tax Calculator</h1>
 
-        <!-- Income Input -->
-        <form id="tax-form">
-            <h3>Enter your monthly income (April to March):</h3>
+        <label for="income">Annual Salary (MMK):</label>
+        <input type="number" id="income" placeholder="Enter annual salary" required>
 
-            <div id="monthly-inputs"></div>
+        <label for="spouse">Spouse (Yes/No):</label>
+        <select id="spouse">
+            <option value="0">No</option>
+            <option value="1000000">Yes</option>
+        </select>
 
-            <button type="button" onclick="calculateTax()">Calculate Tax</button>
-        </form>
+        <label for="children">Number of Children:</label>
+        <input type="number" id="children" placeholder="Enter number of children" min="0">
 
-        <!-- Tax Result -->
-        <div id="result" class="result-container"></div>
+        <label for="parents">Number of Parents (Living with you):</label>
+        <input type="number" id="parents" placeholder="Enter number of parents" min="0">
 
-        <!-- Download Button -->
-        <button id="download-btn" style="display: none;" onclick="downloadResult()">Download Result</button>
+        <label for="ssb">SSB & Insurance Deduction (MMK):</label>
+        <input type="number" id="ssb" placeholder="Enter SSB amount" min="0">
 
-        <a href="../knowledge.html" class="back-btn">Back to Knowledge</a>
+        <button onclick="calculateTax()">Calculate Tax</button>
+
+        <h2>Tax Calculation Result</h2>
+        <div id="result">Your tax amount will be displayed here.</div>
+
+        <a href="../index.html" class="back-btn">Back to Home</a>
     </div>
 
     <script>
-        // Generate input fields for 12 months (April - March)
-        const monthlyInputs = document.getElementById('monthly-inputs');
-        const months = [
-            "April", "May", "June", "July", "August", "September",
-            "October", "November", "December", "January", "February", "March"
-        ];
-
-        months.forEach((month, index) => {
-            monthlyInputs.innerHTML += `
-                <label>${month}:</label>
-                <input type="number" id="month-${index}" placeholder="Enter ${month} income" required><br>
-            `;
-        });
-
-        // Myanmar Income Tax Calculation
         function calculateTax() {
-            const monthlyIncomes = months.map((_, i) => parseFloat(document.getElementById(`month-${i}`).value) || 0);
-            const annualIncome = monthlyIncomes.reduce((a, b) => a + b, 0);
+            let income = parseFloat(document.getElementById('income').value) || 0;
+            let spouseAllowance = parseFloat(document.getElementById('spouse').value);
+            let children = parseInt(document.getElementById('children').value) || 0;
+            let parents = parseInt(document.getElementById('parents').value) || 0;
+            let ssb = parseFloat(document.getElementById('ssb').value) || 0;
+
+            // Calculate total allowance
+            let childAllowance = children * 500000;
+            let parentAllowance = parents * 1000000;
+            let totalAllowances = spouseAllowance + childAllowance + parentAllowance + ssb;
+
+            // Taxable Income
+            let taxableIncome = Math.max(income - totalAllowances, 0);
+            
             let tax = 0;
-
-            if (annualIncome > 4800000) {
-                const taxableIncome = annualIncome; 
-
-                const taxBrackets = [
-                    { limit: 2000000, rate: 0 },
-                    { limit: 10000000, rate: 0.05 },
-                    { limit: 30000000, rate: 0.10 },
-                    { limit: 50000000, rate: 0.15 },
-                    { limit: 70000000, rate: 0.20 },
-                    { limit: Infinity, rate: 0.25 },
-                ];
-
-                let remainingIncome = taxableIncome;
-
-                for (const bracket of taxBrackets) {
-                    if (remainingIncome <= 0) break;
-                    const amountInBracket = Math.min(remainingIncome, bracket.limit);
-                    tax += amountInBracket * bracket.rate;
-                    remainingIncome -= bracket.limit;
+            if (taxableIncome > 4800000) {
+                let taxable = taxableIncome - 4800000;
+                if (taxable <= 2000000) {
+                    tax += taxable * 0;
+                } else if (taxable <= 10000000) {
+                    tax += (Math.min(taxable, 10000000) - 2000000) * 0.05;
+                } else if (taxable <= 30000000) {
+                    tax += (Math.min(taxable, 30000000) - 10000000) * 0.10 + 400000;
+                } else if (taxable <= 50000000) {
+                    tax += (Math.min(taxable, 50000000) - 30000000) * 0.15 + 2400000;
+                } else if (taxable <= 70000000) {
+                    tax += (Math.min(taxable, 70000000) - 50000000) * 0.20 + 5400000;
+                } else {
+                    tax += (taxable - 70000000) * 0.25 + 9400000;
                 }
             }
 
-            displayResult(annualIncome, tax);
-        }
-
-        // Display Tax Calculation Result
-        function displayResult(income, tax) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `
-                <h3>Tax Calculation Result:</h3>
-                <p>Annual Income: ${income.toLocaleString()} Kyats</p>
-                <p>Estimated Tax: ${tax.toLocaleString()} Kyats</p>
-            `;
-
-            document.getElementById('download-btn').style.display = 'block';
-        }
-
-        // Download Tax Report as a Text File
-        function downloadResult() {
-            const income = months.map((_, i) => document.getElementById(`month-${i}`).value || 0);
-            const totalIncome = income.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
-            const result = document.getElementById('result').textContent;
-
-            const content = `Myanmar Income Tax Report (April to March)
-------------------------------------
-Monthly Incomes:
-${months.map((m, i) => `${m}: ${income[i]} Kyats`).join("\n")}
-------------------------------------
-${result}`;
-
-            const blob = new Blob([content], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'income_tax_report.txt';
-            link.click();
+            document.getElementById('result').innerHTML = `<p>Your annual tax is <strong>${tax.toLocaleString()} MMK</strong></p>`;
         }
     </script>
-</body>
 
+</body>
 </html>
