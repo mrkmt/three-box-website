@@ -1,3 +1,80 @@
+/* Responsive Navigation Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: #fff;
+    color: #000;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.nav-container {
+    display: flex;
+    height: 100vh;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+/* Container Styling */
+.container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-right: 2px solid #000;
+    transition: background 0.3s, transform 0.3s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    min-height: 30vh; /* Ensure visibility */
+}
+
+/* Remove right border from last item */
+.container:last-child {
+    border-right: none;
+}
+
+/* Hover Effect */
+.container:hover {
+    background: #007bff;
+    transform: scale(1.05);
+    color: #fff;
+}
+
+/* Title Styling */
+.title {
+    font-size: 2rem;
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column; /* Stack vertically on mobile */
+        height: auto;
+    }
+
+    .container {
+        border-right: none;
+        border-bottom: 2px solid #000; /* Bottom border for separation */
+    }
+
+    .container:last-child {
+        border-bottom: none; /* No border on the last item */
+    }
+
+    .title {
+        font-size: 1.5rem; /* Smaller title for better fit */
+    }
+}
+
+/* Footer Styling */
+.footer {
+    text-align: center;
+    padding: 1rem;
+    background: #f0f0f0;
+    color: #000;
+    font-size: 0.9rem; /* Smaller footer text for mobile */
+}
 /* Infinity Box - Shared Style */
 body {
     font-family: 'Arial', sans-serif;
@@ -67,8 +144,6 @@ footer {
     border-radius: 8px; /* Rounded corners */
     transition: background 0.3s ease; /* Smooth hover effect */
 }
-
-/* Hover effect */
 .back-btn:hover {
     background-color: #0056b3; /* Darker blue on hover */
 }
