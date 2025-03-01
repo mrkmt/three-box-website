@@ -190,9 +190,9 @@
             // Allowances
             let totalAllowances = spouseAllowance + (children * 500000) + (parents * 1000000) + annualSSB;
 
-            // Apply 20% Basic Allowance
+            // Basic Allowance (20% of Taxable Income, max 10,000,000 MMK)
             let taxableIncomeBeforeDeduction = Math.max(annualIncome - totalAllowances, 0);
-            let basicAllowance = taxableIncomeBeforeDeduction * 0.20;
+            let basicAllowance = Math.min(taxableIncomeBeforeDeduction * 0.20, 10000000);
             let taxableIncome = Math.max(taxableIncomeBeforeDeduction - basicAllowance, 0);
 
             // Calculate Tax
