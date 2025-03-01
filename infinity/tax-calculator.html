@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Myanmar Income Tax Calculator (Monthly Adjustments)</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/style2.css">
 </head>
 
 <body>
@@ -36,8 +36,9 @@
         <label for="ssb">Monthly SSB & Insurance Deduction (MMK):</label>
         <input type="number" id="ssb" placeholder="Enter SSB amount" min="0">
 
-        <!-- Calculate Button -->
+        <!-- Buttons -->
         <button onclick="calculateTax()">Calculate Tax</button>
+        <button onclick="downloadResult()">Download Calculation</button>
 
         <!-- Result -->
         <h2>Tax Calculation Result</h2>
@@ -116,13 +117,32 @@
             let monthlyTax = tax / 12;
 
             // Display Result
-            document.getElementById('result').innerHTML = `
+            const resultText = `
                 <p><strong>Total Annual Salary:</strong> ${annualIncome.toLocaleString()} MMK</p>
                 <p><strong>Total Allowances:</strong> ${totalAllowances.toLocaleString()} MMK</p>
                 <p><strong>Taxable Income:</strong> ${taxableIncome.toLocaleString()} MMK</p>
                 <p><strong>Annual Tax:</strong> ${tax.toLocaleString()} MMK</p>
                 <p><strong>Monthly Tax (Approx):</strong> ${monthlyTax.toLocaleString()} MMK</p>
             `;
+
+            document.getElementById('result').innerHTML = resultText;
+
+            // Return the result text for downloading
+            return resultText.replace(/<[^>]*>/g, '');
+        }
+
+        // Download Calculation as a .txt file
+        function downloadResult() {
+            const resultText = calculateTax();
+            const blob = new Blob([resultText], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tax-calculation.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
     </script>
 
