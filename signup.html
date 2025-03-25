@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Sign Up</h2>
+        <form id="signupForm">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Sign Up</button>
+        </form>
+        <button id="googleSignIn">Sign Up with Google</button>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        // Firebase Configuration (Replace with your actual Firebase Config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw",
+            authDomain: "kmtechspaceship.firebaseapp.com",
+            projectId: "kmtechspaceship",
+            storageBucket: "kmtechspaceship.firebasestorage.app",
+            messagingSenderId: "494150534835",
+            appId: "1:494150534835:web:d2b654e04d7b52ca1912c6"
+            };
+            
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        document.getElementById("signupForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    document.getElementById("message").innerText = "Sign-up successful!";
+                })
+                .catch(error => {
+                    document.getElementById("message").innerText = error.message;
+                });
+        });
+
+        document.getElementById("googleSignIn").addEventListener("click", function() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then(result => {
+                    document.getElementById("message").innerText = "Google Sign-in successful!";
+                })
+                .catch(error => {
+                    document.getElementById("message").innerText = error.message;
+                });
+        });
+    </script>
+</body>
+</html>
