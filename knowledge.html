@@ -8,7 +8,10 @@
 </head>
 
 <body>
-  <div id="loading">Checking authentication...</div>
+  <div id="checking-auth" style="text-align: center; margin-top: 50px;">
+    Checking authentication...
+  </div>
+
   <div id="main-content" style="display: none;">
     <h1>∞ Knowledge Sharing</h1>
 
@@ -18,7 +21,6 @@
         <li><a href="infinity/tax-calculator.html">Myanmar Income Tax Calculator</a></li>
         <li><a href="infinity/guidesway.html">Global HR Cloud Mobile Guide</a></li>
         <li><a href="infinity/edocument.html">How to create a Storage Account</a></li>
-        <li><a href="infinity/signup.html">Sign Up form</a></li>
       </ul>
     </div>
 
@@ -35,13 +37,12 @@
       apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
       authDomain: "starter-setup.firebaseapp.com",
       projectId: "starter-setup",
-      storageBucket: "starter-setup.firebasestorage.app",
+      storageBucket: "starter-setup.appspot.com",
       messagingSenderId: "461018098182",
       appId: "1:461018098182:web:030e85a562932ac118f187",
       measurementId: "G-K8WH6SJ0M9"
     };
 
-    // Initialize Firebase
     const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const analytics = firebase.analytics();
@@ -50,14 +51,15 @@
 
     // Auth check
     auth.onAuthStateChanged(user => {
-  document.getElementById("loading").style.display = "none";
-  if (user) {
-    document.getElementById("main-content").style.display = "block";
-  } else {
-    window.location.href = "infinity/signup.html";
-  }
-});
- 
+      if (user) {
+        console.log("Signed in as:", user.email);
+        document.getElementById("checking-auth").style.display = "none";
+        document.getElementById("main-content").style.display = "block";
+      } else {
+        console.log("No user detected. Redirecting to sign-in...");
+        window.location.href = "infinity/signup.html"; // ❗ updated path correctly
+      }
+    });
   </script>
 </body>
 </html>
