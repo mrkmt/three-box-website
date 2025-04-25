@@ -1,30 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>∞ Knowledge Sharing</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>∞ Knowledge Sharing</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
-    <div class="container">
-        <h1>∞ Knowledge Sharing</h1>
+  <div id="main-content" style="display: none;"> 
+    <h1>∞ Knowledge Sharing</h1>
 
-        <!-- Knowledge Library -->
-        <div class="library">
-            <ul>
-                <li><a href="infinity/tax-calculator.html">Myanmar Income Tax Calculator</a></li>
-                <li><a href="infinity/guidesway.html">Global HR Cloud Mobile Guide</a></li>
-                <li><a href="infinity/edocument.html">How to create a Storage Account</a></li>
-                <li><a href="infinity/signup.html">Sign Up form</a></li>
-                <!-- Add more links here -->
-            </ul>
-        </div>
-
-        <a href="../index.html" class="back-btn">Back to Home</a>
+    <!-- Knowledge Library -->
+    <div class="library">
+      <ul>
+        <li><a href="infinity/tax-calculator.html">Myanmar Income Tax Calculator</a></li>
+        <li><a href="infinity/guidesway.html">Global HR Cloud Mobile Guide</a></li>
+        <li><a href="infinity/edocument.html">How to create a Storage Account</a></li>
+        <li><a href="infinity/signup.html">Sign Up form</a></li>
+        <!-- Add more links here -->
+      </ul>
     </div>
 
-   
+    <a href="../index.html" class="back-btn">Back to Home</a>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+      authDomain: "starter-setup.firebaseapp.com",
+      projectId: "starter-setup",
+      storageBucket: "starter-setup.firebasestorage.app",
+      messagingSenderId: "461018098182",
+      appId: "1:461018098182:web:030e85a562932ac118f187",
+      measurementId: "G-K8WH6SJ0M9"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const analytics = firebase.analytics();
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        console.log("User signed in:", user.email);
+        document.getElementById("main-content").style.display = "block";
+      } else {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+          .then(result => {
+            alert("Welcome, " + result.user.displayName);
+            document.getElementById("main-content").style.display = "block";
+          })
+          .catch(error => {
+            alert("Sign-in failed: " + error.message);
+            window.location.href = "../index.html";
+          });
+      }
+    });
+  </script>
 </body>
 </html>
