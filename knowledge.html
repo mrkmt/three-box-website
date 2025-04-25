@@ -8,6 +8,7 @@
 </head>
 
 <body>
+  <div id="loading">Checking authentication...</div>
   <div id="main-content" style="display: none;">
     <h1>∞ Knowledge Sharing</h1>
 
@@ -49,14 +50,14 @@
 
     // Auth check
     auth.onAuthStateChanged(user => {
-      if (user) {
-        console.log("Signed in as:", user.email);
-        document.getElementById("main-content").style.display = "block";
-      } else {
-        // Redirect to your custom sign-up page
-        window.location.href = "infinity/signup.html";
-      }
-    });
+  document.getElementById("loading").style.display = "none";
+  if (user) {
+    document.getElementById("main-content").style.display = "block";
+  } else {
+    window.location.href = "infinity/signup.html";
+  }
+});
+ 
   </script>
 </body>
 </html>
