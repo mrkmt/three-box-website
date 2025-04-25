@@ -1,41 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Space</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | KMTechSpaceship</title>
+  <link rel="stylesheet" href="css/styles.css"/>
 </head>
 
-
 <body>
-    <!-- Navigation Boxes -->
-    <div class="nav-container">
-        <a href="about.html" class="container">
-            <div class="title">Me</div>
-        </a>
-        <a href="daily.html" class="container">
-            <div class="title">Daily</div>
-        </a>
-        <a href="knowledge.html" class="container">
-            <div class="title">∞</div>
-        </a>
-    </div>
-   
-    <!-- Footer -->
-    <div class="footer">
-        &copy; 2025 Kaung Myat Thu. All Rights Reserved.
-    </div>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-K8WH6SJ0M9"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <div class="container">
+    <h1 class="title">KMTechSpaceship</h1>
 
-  gtag('config', 'G-K8WH6SJ0M9');
-</script>
+    <div id="popup" class="popup"></div> <!-- popup box -->
+
+    <div class="form-wrapper">
+      <form id="signup-form" class="form">
+        <h2>Create Account</h2>
+
+        <div class="input-group">
+          <input type="email" id="signup-email" required>
+          <label for="signup-email">Email</label>
+        </div>
+
+        <div class="input-group">
+          <input type="password" id="signup-password" required>
+          <label for="signup-password">Password</label>
+        </div>
+
+        <button type="submit" class="btn">Sign Up</button>
+      </form>
+
+      <form id="signin-form" class="form">
+        <h2>Sign In</h2>
+
+        <div class="input-group">
+          <input type="email" id="signin-email" required>
+          <label for="signin-email">Email</label>
+        </div>
+
+        <div class="input-group">
+          <input type="password" id="signin-password" required>
+          <label for="signin-password">Password</label>
+        </div>
+
+        <div class="forgot-password">
+          <a href="#" id="forgot-password-link">Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="btn">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+      authDomain: "starter-setup.firebaseapp.com",
+      projectId: "starter-setup",
+      storageBucket: "starter-setup.appspot.com",
+      messagingSenderId: "461018098182",
+      appId: "1:461018098182:web:030e85a562932ac118f187",
+      measurementId: "G-K8WH6SJ0M9"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const popup = document.getElementById('popup');
+
+    function showPopup(message, type="info") {
+      popup.textContent = message;
+      popup.className = 'popup show ' + type;
+      setTimeout(() => popup.classList.remove('show'), 3000);
+    }
+
+    // Sign Up
+    document.getElementById('signup-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          userCredential.user.sendEmailVerification()
+            .then(() => {
+              showPopup('Verification email sent! Please verify your email.', 'success');
+              auth.signOut();
+            });
+        })
+        .catch((error) => {
+          showPopup('Signup Error: ' + error.message, 'error');
+        });
+    });
+
+    // Sign In
+    document.getElementById('signin-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('signin-email').value;
+      const password = document.getElementById('signin-password').value;
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          if (userCredential.user.emailVerified) {
+            showPopup('Login successful!', 'success');
+            setTimeout(() => {
+              window.location.href = 'knowledge.html';
+            }, 1000);
+          } else {
+            showPopup('Please verify your email first!', 'warning');
+            auth.signOut();
+          }
+        })
+        .catch((error) => {
+          showPopup('Signin Error: ' + error.message, 'error');
+        });
+    });
+
+    // Forgot Password
+    document.getElementById('forgot-password-link').addEventListener('click', function (e) {
+      e.preventDefault();
+      const email = prompt('Please enter your email for password reset:');
+      if (email) {
+        auth.sendPasswordResetEmail(email)
+          .then(() => {
+            showPopup('Password reset email sent!', 'success');
+          })
+          .catch((error) => {
+            showPopup('Error: ' + error.message, 'error');
+          });
+      }
+    });
+  </script>
 </body>
-
 </html>
