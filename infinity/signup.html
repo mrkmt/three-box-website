@@ -57,90 +57,92 @@
   </div>
 
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
-      authDomain: "starter-setup.firebaseapp.com",
-      projectId: "starter-setup",
-      storageBucket: "starter-setup.appspot.com",
-      messagingSenderId: "461018098182",
-      appId: "1:461018098182:web:030e85a562932ac118f187",
-      measurementId: "G-K8WH6SJ0M9"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+    authDomain: "starter-setup.firebaseapp.com",
+    projectId: "starter-setup",
+    storageBucket: "starter-setup.appspot.com",
+    messagingSenderId: "461018098182",
+    appId: "1:461018098182:web:030e85a562932ac118f187",
+    measurementId: "G-K8WH6SJ0M9"
+  };
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const analytics = firebase.analytics();
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const analytics = firebase.analytics();
 
-    // Email Signup
-    document.getElementById("signup-form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const email = document.getElementById("signup-email").value;
-      const password = document.getElementById("signup-password").value;
+  // Email Signup
+  document.getElementById("signup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("signup-email").value.trim();
+    const password = document.getElementById("signup-password").value.trim();
 
-      auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-          alert("Signup Successful!");
-          window.location.href = "knowledge.html";
-        })
-        .catch((error) => alert("Signup Error: " + error.message));
-    });
+    try {
+      await auth.createUserWithEmailAndPassword(email, password);
+      alert("Account created successfully!");
+      window.location.href = "knowledge.html";
+    } catch (error) {
+      alert("Signup Error: " + error.message);
+    }
+  });
 
-    // Email Signin
-    document.getElementById("signin-form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const email = document.getElementById("signin-email").value;
-      const password = document.getElementById("signin-password").value;
+  // Email Signin
+  document.getElementById("signin-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("signin-email").value.trim();
+    const password = document.getElementById("signin-password").value.trim();
 
-      auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-          alert("Welcome back!");
-          window.location.href = "knowledge.html";
-        })
-        .catch((error) => alert("Signin Error: " + error.message));
-    });
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      alert("Welcome back!");
+      window.location.href = "knowledge.html";
+    } catch (error) {
+      alert("Signin Error: " + error.message);
+    }
+  });
 
-    // Google Sign In
-    document.getElementById("googleSignIn").addEventListener("click", function (e) {
-      e.preventDefault();
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then((result) => {
-          alert("Signed in as " + result.user.email);
-          window.location.href = "knowledge.html";
-        })
-        .catch((error) => alert("Google Sign-in Error: " + error.message));
-    });
+  // Google Sign In
+  const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-    // Google Sign Up (same as Sign In)
-    document.getElementById("googleSignUp").addEventListener("click", function (e) {
-      e.preventDefault();
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then((result) => {
-          alert("Signed up as " + result.user.email);
-          window.location.href = "knowledge.html";
-        })
-        .catch((error) => alert("Google Sign-up Error: " + error.message));
-    });
+  document.getElementById("googleSignIn").addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      const result = await auth.signInWithPopup(googleProvider);
+      alert("Signed in as " + result.user.email);
+      window.location.href = "knowledge.html";
+    } catch (error) {
+      alert("Google Sign-in Error: " + error.message);
+    }
+  });
 
-    // Analytics (track page view)
-    analytics.logEvent('page_view', { page_path: window.location.pathname });
-  </script>
+  document.getElementById("googleSignUp").addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      const result = await auth.signInWithPopup(googleProvider);
+      alert("Signed up as " + result.user.email);
+      window.location.href = "knowledge.html";
+    } catch (error) {
+      alert("Google Sign-up Error: " + error.message);
+    }
+  });
 
-  <!-- Form toggle JS -->
-  <script>
-    const container = document.getElementById('container');
-    document.getElementById('register').addEventListener('click', () => {
-      container.classList.add("right-panel-active");
-    });
-    document.getElementById('login').addEventListener('click', () => {
-      container.classList.remove("right-panel-active");
-    });
-  </script>
+  analytics.logEvent('page_view', { page_path: window.location.pathname });
+</script>
+
+<!-- Form toggle JS -->
+<script>
+  const container = document.getElementById('container');
+  document.getElementById('register').addEventListener('click', () => {
+    container.classList.add("right-panel-active");
+  });
+  document.getElementById('login').addEventListener('click', () => {
+    container.classList.remove("right-panel-active");
+  });
+</script>
 </body>
 </html>
