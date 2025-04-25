@@ -9,3 +9,17 @@ registerBtn.addEventListener('click', () => {
 loginBtn.addEventListener('click', () => {
     container.classList.remove("active");
 });
+
+document.getElementById("googleSignIn").addEventListener("click", (e) => {
+    e.preventDefault();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .then(result => {
+        alert("Signed in with Google: " + result.user.email);
+        window.location.href = "knowledge.html";
+      })
+      .catch(error => {
+        alert("Google Sign-In Error: " + error.message);
+      });
+  });
+  
