@@ -18,7 +18,6 @@
         <li><a href="infinity/guidesway.html">Global HR Cloud Mobile Guide</a></li>
         <li><a href="infinity/edocument.html">How to create a Storage Account</a></li>
         <li><a href="infinity/signup.html">Sign Up form</a></li>
-        <!-- Add more links here -->
       </ul>
     </div>
 
@@ -46,25 +45,16 @@
     const auth = firebase.auth();
     const analytics = firebase.analytics();
 
-    // Track page view (optional but recommended for analytics)
     analytics.logEvent('page_view', { page_path: window.location.pathname });
 
-    // Google Sign-In
+    // Auth check
     auth.onAuthStateChanged(user => {
       if (user) {
         console.log("Signed in as:", user.email);
         document.getElementById("main-content").style.display = "block";
       } else {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider)
-          .then(result => {
-            alert("Welcome, " + result.user.displayName);
-            document.getElementById("main-content").style.display = "block";
-          })
-          .catch(error => {
-            alert("Sign-in failed: " + error.message);
-            window.location.href = "../index.html"; // fallback redirect
-          });
+        // Redirect to your custom sign-up page
+        window.location.href = "infinity/signup.html";
       }
     });
   </script>
