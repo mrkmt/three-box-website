@@ -1,78 +1,176 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-      <link rel="stylesheet" href="css/styless.css" />
-      <title>Sign Up with Google</title>
-    </head>
-    <body>
-    
-      <div class="container" id="container">
-        <div class="form-container sign-up">
-          <form>
-            <h1>Create Account</h1>
-            <div class="social-icons">
-              <a href="#" class="icon google-signin"><i class="fa-brands fa-google-plus-g"></i></a>
-            </div>
-            <span>or use your email for registration</span>
-            <input type="text" placeholder="Name" />
-            <input type="email" placeholder="Email" />
-            <input type="password" placeholder="Password" />
-            <button-type>Sign Up</button-type>
-          </form>
-        </div>
-      </div>
-    
-      <!-- Firebase SDK Scripts -->
-      <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-    
-        // 🔧 Replace with your Firebase config
-        const firebaseConfig = {
-       apiKey:  "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
-       authDomain: "starter-setup.firebaseapp.com",
-       projectId: "starter-setup",
-       appId: "1:461018098182:web:030e85a562932ac118f187"
-       };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <title>Sign Up</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
-    
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-        const db = getFirestore(app);
-    
-        // Sign in with Google
-        document.querySelector('.google-signin').addEventListener('click', async (e) => {
-          e.preventDefault();
-          try {
-            const result = await signInWithPopup(auth, provider);
-            const user = result.user;
-    
-            const username = prompt("Enter your preferred username:");
-            if (username) {
-              await setDoc(doc(db, "users", user.uid), {
-                uid: user.uid,
-                email: user.email,
-                username: username,
-                displayName: user.displayName || "",
-                createdAt: new Date().toISOString()
-              });
-              // ✅ Redirect to knowledge.html
-              window.location.href = "knowledge.html";
-            } else {
-              alert("Username is required to continue.");
-            }
-          } catch (error) {
-            console.error("Sign-in error:", error);
-            alert("Google Sign-in failed.");
-          }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(to right, #e2e2e2, #c9d6ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #fff;
+      border-radius: 30px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+      width: 400px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .container h1 {
+      margin-bottom: 20px;
+    }
+
+    .social-icons {
+      margin: 20px 0;
+    }
+
+    .social-icons a {
+      border: 1px solid #ccc;
+      border-radius: 50%;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 8px;
+      width: 40px;
+      height: 40px;
+      color: #333;
+      text-decoration: none;
+    }
+
+    .container span {
+      display: block;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    .container input {
+      background-color: #eee;
+      border: none;
+      margin: 8px 0;
+      padding: 10px 15px;
+      font-size: 14px;
+      border-radius: 8px;
+      width: 100%;
+      outline: none;
+    }
+
+    .container button {
+      background-color: #512da8;
+      color: #fff;
+      font-size: 14px;
+      padding: 10px 45px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Create Account</h1>
+    <div class="social-icons">
+      <a href="#" class="google-signin"><i class="fa-brands fa-google"></i></a>
+    </div>
+    <span>or use your email for registration</span>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="email-signup">Sign Up with Email</button>
+  </div>
+
+  <!-- Firebase SDK Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+      authDomain: "starter-setup.firebaseapp.com",
+      projectId: "starter-setup",
+      appId: "1:461018098182:web:030e85a562932ac118f187"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // Google Sign-In
+    document.querySelector('.google-signin').addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const username = prompt("Enter your preferred username:");
+
+        if (username) {
+          await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            email: user.email,
+            username,
+            displayName: user.displayName || "",
+            createdAt: new Date().toISOString()
+          });
+          window.location.href = "knowledge.html";
+        } else {
+          alert("Username is required to continue.");
+        }
+      } catch (error) {
+        console.error("Google Sign-in failed:", error);
+        alert("Google Sign-in failed.");
+      }
+    });
+
+    // Email Sign-Up
+    document.getElementById('email-signup').addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !email || !password) {
+        return alert("Please fill in all fields.");
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email,
+          username,
+          displayName: "",
+          createdAt: new Date().toISOString()
         });
-      </script>
-    
-    </body>
-    </html>
-    
+
+        window.location.href = "knowledge.html";
+      } catch (error) {
+        console.error("Email sign-up failed:", error);
+        alert("Error signing up: " + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
