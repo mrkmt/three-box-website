@@ -110,9 +110,9 @@
       const user = result.user;
 
   // ✅ Gmail address check
-    if (!user.email.endsWith('@gmail.com')) {
-    alert("Only @gmail.com email addresses are allowed.");
-    await signOut(auth);
+  if (!user.email.endsWith('@gmail.com')) {
+  alert("Only @gmail.com email addresses are allowed.");
+  await signOut(auth);
   return;
 }
 

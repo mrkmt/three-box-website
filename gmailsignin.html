@@ -1,128 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Google Sign In + Real-Time Logs</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 40px;
-    }
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+      <link rel="stylesheet" href="css/styless.css" />
+      <title>Sign Up with Google</title>
+    </head>
+    <body>
+    
+      <div class="container" id="container">
+        <div class="form-container sign-up">
+          <form>
+            <h1>Create Account</h1>
+            <div class="social-icons">
+              <a href="#" class="icon google-signin"><i class="fa-brands fa-google-plus-g"></i></a>
+            </div>
+            <span>or use your email for registration</span>
+            <input type="text" placeholder="Name" />
+            <input type="email" placeholder="Email" />
+            <input type="password" placeholder="Password" />
+            <button-type>Sign Up</button-type>
+          </form>
+        </div>
+      </div>
+    
+      <!-- Firebase SDK Scripts -->
+      <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    
+        // 🔧 Replace with your Firebase config
+        const firebaseConfig = {
+       apiKey:  "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+       authDomain: "starter-setup.firebaseapp.com",
+       projectId: "starter-setup",
+       appId: "1:461018098182:web:030e85a562932ac118f187"
+       };
 
-    .google-btn {
-      display: inline-flex;
-      align-items: center;
-      background-color: white;
-      color: #444;
-      border: 1px solid #ccc;
-      padding: 10px 15px;
-      font-size: 16px;
-      cursor: pointer;
-      border-radius: 5px;
-      transition: box-shadow 0.3s ease;
-    }
-
-    .google-btn:hover {
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-
-    .google-logo {
-      width: 20px;
-      margin-right: 10px;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 30px;
-    }
-
-    li {
-      background: #f0f0f0;
-      margin: 5px auto;
-      padding: 10px;
-      border-radius: 5px;
-      max-width: 400px;
-      text-align: left;
-    }
-  </style>
-</head>
-<body>
-
-  <h2>Login with Google</h2>
-  <button class="google-btn" onclick="signInWithGoogle()">
-    <img class="google-logo" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" />
-    Continue with Google
-  </button>
-
-  <h3>Real-Time Login History</h3>
-  <ul id="log-list"></ul>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      onSnapshot,
-      orderBy,
-      query,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
-    // TODO: Replace with your Firebase project config
-    const firebaseConfig = {
-      apiKey:  "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
-      authDomain: "starter-setup.firebaseapp.com",
-      projectId: "starter-setup",
-      appId: "1:461018098182:web:030e85a562932ac118f187"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const db = getFirestore(app);
-
-    window.signInWithGoogle = async function () {
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        // Save login log
-        await addDoc(collection(db, "login_logs"), {
-          uid: user.uid,
-          email: user.email,
-          loginAt: serverTimestamp()
+    
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        const db = getFirestore(app);
+    
+        // Sign in with Google
+        document.querySelector('.google-signin').addEventListener('click', async (e) => {
+          e.preventDefault();
+          try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+    
+            const username = prompt("Enter your preferred username:");
+            if (username) {
+              await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                email: user.email,
+                username: username,
+                displayName: user.displayName || "",
+                createdAt: new Date().toISOString()
+              });
+              // ✅ Redirect to knowledge.html
+              window.location.href = "knowledge.html";
+            } else {
+              alert("Username is required to continue.");
+            }
+          } catch (error) {
+            console.error("Sign-in error:", error);
+            alert("Google Sign-in failed.");
+          }
         });
-
-        alert("Signed in as " + user.displayName);
-      } catch (error) {
-        console.error(error);
-        alert("Sign-in failed: " + error.message);
-      }
-    };
-
-    // Real-time log viewer
-    const logList = document.getElementById("log-list");
-    const logsQuery = query(
-      collection(db, "login_logs"),
-      orderBy("loginAt", "desc")
-    );
-
-    onSnapshot(logsQuery, (snapshot) => {
-      logList.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const li = document.createElement("li");
-        const loginTime = data.loginAt?.toDate().toLocaleString() || "No time";
-        li.textContent = `${data.email} logged in at ${loginTime}`;
-        logList.appendChild(li);
-      });
-    });
-  </script>
-
-</body>
-</html>
+      </script>
+    
+    </body>
+    </html>
+    
