@@ -3,45 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modern Login Page</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
   <link rel="stylesheet" href="css/styless.css" />
-  <title>Modern Login Page</title>
 </head>
 <body>
 
   <div class="container" id="container">
+    <!-- Sign Up Form -->
     <div class="form-container sign-up">
-      <form>
+      <form id="signup-form">
         <h1>Create Account</h1>
-        <div class="social-icons">
-          <a href="#" class="icon google-signin"><i class="fa-brands fa-google-plus-g"></i></a>
-          <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
-          <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
-          <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
-        </div>
-        <span>or use your email for registeration</span>
-        <input type="text" placeholder="Name" />
-        <input type="email" placeholder="Email" />
-        <input type="password" placeholder="Password" />
-        <button>Sign Up</button>
+        <input type="text" id="signup-name" placeholder="Name" required />
+        <input type="email" id="signup-email" placeholder="Email" required />
+        <input type="password" id="signup-password" placeholder="Password" required />
+        <button type="submit">Sign Up</button>
+        <button type="button" id="googleSignupBtn" class="google">Sign Up with Google</button>
       </form>
     </div>
+
+    <!-- Sign In Form -->
     <div class="form-container sign-in">
-      <form>
+      <form id="signin-form">
         <h1>Sign In</h1>
-        <div class="social-icons">
-          <a href="#" class="icon google-signin"><i class="fa-brands fa-google-plus-g"></i></a>
-          <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
-          <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
-          <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
-        </div>
-        <span>or use your email password</span>
-        <input type="email" placeholder="Email" />
-        <input type="password" placeholder="Password" />
-        <a href="#">Forget Your Password?</a>
-        <a href="#"><button type="button">Sign In</button></a>
+        <input type="email" id="signin-email" placeholder="Email" required />
+        <input type="password" id="signin-password" placeholder="Password" required />
+        <button type="submit">Sign In</button>
+        <button type="button" id="googleSigninBtn" class="google">Sign In with Google</button>
       </form>
     </div>
+
+    <!-- Toggle Panels -->
     <div class="toggle-container">
       <div class="toggle">
         <div class="toggle-panel toggle-left">
@@ -58,73 +50,115 @@
     </div>
   </div>
 
-  <button id="signout-btn" style="display:none; margin: 20px;">Sign Out</button>
+  <button id="signout-btn" style="display:none; margin:20px;">Sign Out</button>
 
   <!-- Firebase SDK Scripts -->
-  <!-- Firebase SDK Scripts -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  // 🔧 Firebase Config
-  const firebaseConfig = {
-    apiKey:  "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
-    authDomain: "starter-setup.firebaseapp.com",
-    projectId: "starter-setup",
-    appId: "1:461018098182:web:030e85a562932ac118f187"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+      authDomain: "starter-setup.firebaseapp.com",
+      projectId: "starter-setup",
+      appId: "1:461018098182:web:030e85a562932ac118f187"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
-  // Google Sign-In
-  document.querySelectorAll('.google-signin').forEach(icon => {
-    icon.addEventListener('click', async (e) => {
+    // Sign Up (Email/Password)
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const name = document.getElementById('signup-name').value;
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email,
+          username: name,
+          loginTime: new Date().toISOString()
+        });
+        localStorage.setItem('username', name);
+        window.location.href = "knowledge.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    // Sign In (Email/Password)
+    document.getElementById('signin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signin-email').value;
+      const password = document.getElementById('signin-password').value;
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        localStorage.setItem('username', user.email);
+        window.location.href = "knowledge.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+    
+      const user = result.user;
+
+  // ✅ Gmail address check
+    if (!user.email.endsWith('@gmail.com')) {
+    alert("Only @gmail.com email addresses are allowed.");
+    await signOut(auth);
+  return;
+}
+
+    // Google Sign-In
+    async function googleLogin() {
       try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-
-        // Prompt username
-        const username = prompt("Enter your preferred username:", user.displayName || "");
-
+        let username = user.displayName;
+        if (!username || username.trim() === "") {
+          username = prompt("Enter your preferred username:");
+        }
         if (username) {
           await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             email: user.email,
-            displayName: user.displayName,
             username: username,
             loginTime: new Date().toISOString()
           });
-           // ✅ Username ကို LocalStorage ထဲသိမ်းမယ်
           localStorage.setItem('username', username);
-          // ✅ Redirect to knowledge.html
           window.location.href = "knowledge.html";
-        } else {
-          alert("Username is required to continue.");
         }
       } catch (error) {
-        console.error("Sign-in error:", error);
         alert("Google Sign-in failed.");
+        console.error(error);
       }
-    });
-  });
+    }
 
-  // Google Sign-Out
-  const signOutBtn = document.getElementById('signout-btn');
-  signOutBtn.addEventListener('click', async () => {
-    try {
+    document.getElementById('googleSigninBtn').addEventListener('click', googleLogin);
+    document.getElementById('googleSignupBtn').addEventListener('click', googleLogin);
+
+    // Sign Out
+    document.getElementById('signout-btn').addEventListener('click', async () => {
       await signOut(auth);
       alert("Signed out successfully.");
       location.reload();
-    } catch (error) {
-      console.error("Sign-out error:", error);
-    }
-  });
+    });
 
-</script> <!-- ✅ ပိတ်ပြီးတဲ့ script tag -->
+    // Toggle Panels
+    document.getElementById('register').addEventListener('click', () => {
+      document.getElementById('container').classList.add("right-panel-active");
+    });
+    document.getElementById('login').addEventListener('click', () => {
+      document.getElementById('container').classList.remove("right-panel-active");
+    });
+
+  </script>
 </body>
 </html>
