@@ -20,6 +20,19 @@
 
     <button id="signout-btn">Sign Out</button>
   </div>
+  
+  <script>
+    // LocalStorage က Username ကိုဖတ်မယ်
+    const username = localStorage.getItem('username');
+
+    if (username) {
+      alert(`Welcome, ${username}! 🎉`);
+      // ပြီးရင်ဖျက်မယ် မနေနဲ့ LocalStorage မှာ
+      localStorage.removeItem('username');
+    } else {
+      alert('Welcome!');
+    }
+  </script>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>

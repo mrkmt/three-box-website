@@ -61,44 +61,47 @@
   <button id="signout-btn" style="display:none; margin: 20px;">Sign Out</button>
 
   <!-- Firebase SDK Scripts -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  <!-- Firebase SDK Scripts -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-    // 🔧 Firebase Config (replace with your own project info)
-    const firebaseConfig = {
-      apiKey:  "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
-      authDomain: "starter-setup.firebaseapp.com",
-      projectId: "starter-setup",
-      appId: "1:461018098182:web:030e85a562932ac118f187"
-    };
+  // 🔧 Firebase Config
+  const firebaseConfig = {
+    apiKey:  "AIzaSyATK_3sYrjhehVHYvy32W9ukWi7ScCsNYk",
+    authDomain: "starter-setup.firebaseapp.com",
+    projectId: "starter-setup",
+    appId: "1:461018098182:web:030e85a562932ac118f187"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  const db = getFirestore(app);
 
-    // Google Sign-In
-    document.querySelectorAll('.google-signin').forEach(icon => {
-      icon.addEventListener('click', async (e) => {
-        e.preventDefault();
-        try {
-          const result = await signInWithPopup(auth, provider);
-          const user = result.user;
+  // Google Sign-In
+  document.querySelectorAll('.google-signin').forEach(icon => {
+    icon.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
 
-          // Prompt username
-          const username = prompt("Enter your preferred username:", user.displayName || "");
+        // Prompt username
+        const username = prompt("Enter your preferred username:", user.displayName || "");
 
-          if (username) {
-            await setDoc(doc(db, "users", user.uid), {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              username: username,
-              loginTime: new Date().toISOString()
-            });
-             // ✅ Redirect to knowledge.html
+        if (username) {
+          await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            username: username,
+            loginTime: new Date().toISOString()
+          });
+           // ✅ Username ကို LocalStorage ထဲသိမ်းမယ်
+          localStorage.setItem('username', username);
+          // ✅ Redirect to knowledge.html
           window.location.href = "knowledge.html";
         } else {
           alert("Username is required to continue.");
@@ -108,6 +111,20 @@
         alert("Google Sign-in failed.");
       }
     });
-  </script>
+  });
+
+  // Google Sign-Out
+  const signOutBtn = document.getElementById('signout-btn');
+  signOutBtn.addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      alert("Signed out successfully.");
+      location.reload();
+    } catch (error) {
+      console.error("Sign-out error:", error);
+    }
+  });
+
+</script> <!-- ✅ ပိတ်ပြီးတဲ့ script tag -->
 </body>
 </html>
