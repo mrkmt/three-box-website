@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meditation Timer</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .app-container {
+            max-width: 500px;
+            width: 95%;
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 1rem;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-tab.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tab:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .timer-container {
+            text-align: center;
+        }
+
+        .timer-circle {
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 2rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circle-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .circle-progress {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #ffffff 0%, #ffffff var(--progress, 0%), transparent var(--progress, 0%));
+            -webkit-mask: radial-gradient(circle, transparent 120px, black 123px);
+            mask: radial-gradient(circle, transparent 120px, black 123px);
+            transition: --progress 1s ease;
+        }
+
+        .timer-display {
+            font-size: 3.5rem;
+            font-weight: 300;
+            color: white;
+            letter-spacing: -0.02em;
+            z-index: 10;
+            position: relative;
+        }
+
+        .timer-label {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            font-weight: 400;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-primary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+
+        .complete {
+            animation: complete 0.6s ease-out;
+        }
+
+        @keyframes complete {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .floating-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: float 8s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .preset-btn {
+            padding: 1.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .preset-time {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .preset-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .minutes-label {
+            color: white;
+        }
+
+        .custom-input {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .time-input {
+            width: 60px;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.5rem;
+            color: white;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .time-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .settings-grid {
+            display: grid;
+            gap: 1.5rem;
+            text-align: left;
+        }
+
+        .setting-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-title {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .setting-description {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-particles" id="particles"></div>
+    
+    <div class="app-container">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('timer')">Timer</button>
+            <button class="nav-tab" onclick="switchTab('presets')">Presets</button>
+            <button class="nav-tab" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <!-- Timer Tab -->
+        <div class="tab-content active" id="timer-tab">
+            <div class="timer-container">
+                <div class="timer-label">Meditation Timer</div>
+                
+                <div class="timer-circle" id="timerCircle">
+                    <div class="circle-bg"></div>
+                    <div class="circle-progress" id="circleProgress"></div>
+                    <div class="timer-display" id="timerDisplay">15:00</div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" id="startBtn" onclick="toggleTimer()">Start</button>
+                    <button class="btn btn-secondary" id="resetBtn" onclick="resetTimer()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presets Tab -->
+        <div class="tab-content" id="presets-tab">
+            <div class="timer-label">Quick Start</div>
+            
+            <div class="preset-grid">
+                <div class="preset-btn" onclick="setPreset(5)">
+                    <div class="preset-time">5 min</div>
+                    <div class="preset-label">Quick Focus</div>
+                </div>
+                <div class="preset-btn" onclick="setPreset(10)">
+                    <div class="preset-time">10 min</div>
+                    <div class="preset-label">Short Break</div>
+                </div>
+                <div class="preset-btn" onclick="setPreset(15)">
+                    <div class="preset-time">15 min</div>
+                    <div class="preset-label">Meditation</div>
+                </div>
+                <div class="preset-btn" onclick="setPreset(25)">
+                    <div class="preset-time">25 min</div>
+                    <div class="preset-label">Pomodoro</div>
+                </div>
+                <div class="preset-btn" onclick="setPreset(30)">
+                    <div class="preset-time">30 min</div>
+                    <div class="preset-label">Deep Work</div>
+                </div>
+                <div class="preset-btn" onclick="setPreset(60)">
+                    <div class="preset-time">60 min</div>
+                    <div class="preset-label">Long Session</div>
+                </div>
+                <span class="minutes-label">minutes</span>
+
+            <div class="custom-input">
+                <input type="number" class="time-input" id="customMinutes" placeholder="15" min="1" max="999">
+                <spanspan class="minutes-label">minutes</span>
+                <button class="btn btn-primary" onclick="setCustomTime()">Set</button>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings-tab">
+            <div class="timer-label">Settings</div>
+            
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <div class="setting-title">Sound Alerts</div>
+                    <div class="setting-description">Play notification sounds when timer completes</div>
+                    <div class="toggle-switch" id="soundToggle" onclick="toggleSetting('sound')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-title">Pulsing Animation</div>
+                    <div class="setting-description">Show breathing animation during active timer</div>
+                    <div class="toggle-switch active" id="pulseToggle" onclick="toggleSetting('pulse')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-title">Auto-Reset</div>
+                    <div class="setting-description">Automatically reset timer after completion</div>
+                    <div class="toggle-switch" id="autoResetToggle" onclick="toggleSetting('autoReset')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-title">Floating Particles</div>
+                    <div class="setting-description">Show ambient particle effects</div>
+                    <div class="toggle-switch active" id="particlesToggle" onclick="toggleSetting('particles')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let timeLeft = 15 * 60; // 15 minutes in seconds
+        let totalTime = 15 * 60;
+        let timerInterval = null;
+        let isRunning = false;
+        
+        // Settings
+        let settings = {
+            sound: false,
+            pulse: true,
+            autoReset: false,
+            particles: true
+        };
+
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (8 + Math.random() * 4) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            document.getElementById('timerDisplay').textContent = formatTime(timeLeft);
+            const progress = ((totalTime - timeLeft) / totalTime) * 100;
+            document.getElementById('circleProgress').style.setProperty('--progress', progress + '%');
+        }
+
+        function toggleTimer() {
+            const startBtn = document.getElementById('startBtn');
+            const timerCircle = document.getElementById('timerCircle');
+            
+            if (!isRunning) {
+                // Start timer
+                isRunning = true;
+                startBtn.textContent = 'Pause';
+                if (settings.pulse) {
+                    timerCircle.classList.add('pulse');
+                }
+                
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateDisplay();
+                    
+                    if (timeLeft <= 0) {
+                        completeTimer();
+                    }
+                }, 1000);
+            } else {
+                // Pause timer
+                isRunning = false;
+                startBtn.textContent = 'Start';
+                timerCircle.classList.remove('pulse');
+                clearInterval(timerInterval);
+            }
+        }
+
+        function resetTimer() {
+            isRunning = false;
+            timeLeft = totalTime;
+            clearInterval(timerInterval);
+            
+            document.getElementById('startBtn').textContent = 'Start';
+            document.getElementById('timerCircle').classList.remove('pulse');
+            updateDisplay();
+        }
+
+        function completeTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            
+            const timerCircle = document.getElementById('timerCircle');
+            const startBtn = document.getElementById('startBtn');
+            
+            timerCircle.classList.remove('pulse');
+            timerCircle.classList.add('complete');
+            startBtn.textContent = 'Start';
+            
+            // Create completion effect
+            setTimeout(() => {
+                timerCircle.classList.remove('complete');
+                if (settings.sound) {
+                    // Visual notification since we can't play actual sounds
+                    alert('🧘‍♀️ Timer complete! Take a moment to appreciate your practice.');
+                } else {
+                    alert('🧘‍♀️ Timer complete! Take a moment to appreciate your practice.');
+                }
+                
+                if (settings.autoReset) {
+                    resetTimer();
+                }
+            }, 600);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // Preset functions
+        function setPreset(minutes) {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                document.getElementById('startBtn').textContent = 'Start';
+                document.getElementById('timerCircle').classList.remove('pulse');
+            }
+            
+            timeLeft = minutes * 60;
+            totalTime = minutes * 60;
+            updateDisplay();
+            
+            // Switch to timer tab
+            switchTab('timer');
+            document.querySelector('.nav-tab').classList.remove('active');
+            document.querySelector('.nav-tab').classList.add('active');
+        }
+
+        function setCustomTime() {
+            const customMinutes = parseInt(document.getElementById('customMinutes').value);
+            if (customMinutes && customMinutes > 0) {
+                setPreset(customMinutes);
+                document.getElementById('customMinutes').value = '';
+            }
+        }
+
+        // Settings functions
+        function toggleSetting(settingName) {
+            settings[settingName] = !settings[settingName];
+            const toggle = document.getElementById(settingName + 'Toggle');
+            
+            if (settings[settingName]) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+            
+            // Apply setting changes
+            if (settingName === 'particles') {
+                const particles = document.getElementById('particles');
+                particles.style.display = settings.particles ? 'block' : 'none';
+            }
+        }
+
+        // Initialize
+        createParticles();
+        updateDisplay();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9859faa832008235',t:'MTc1ODk2NTM5My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
