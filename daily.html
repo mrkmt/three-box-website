@@ -1,39 +1,455 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Space</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Daily Form - My Space</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #dee2e6;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #4facfe;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            color: #2e7d32;
+            display: none;
+        }
+
+        .editor-section {
+            margin-top: 30px;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .editor-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .control-btn.save {
+            background: #28a745;
+        }
+
+        .control-btn.save:hover {
+            background: #218838;
+        }
+
+        .control-btn.clear {
+            background: #dc3545;
+        }
+
+        .control-btn.clear:hover {
+            background: #c82333;
+        }
+
+        .text-editor {
+            width: 100%;
+            min-height: 400px;
+            padding: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            background: #fafafa;
+        }
+
+        .text-editor:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .preview-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .preview-content {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            border-left: 4px solid #4facfe;
+            font-family: Georgia, serif;
+            line-height: 1.8;
+        }
+
+        .preview-content h1, .preview-content h2, .preview-content h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .preview-content pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .preview-content code {
+            background: #e2e8f0;
+            color: #2d3748;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 12px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: white;
+            color: #4facfe;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .footer strong {
+            color: #4facfe;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .editor-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            
+            .editor-controls {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
-
 <body>
-    <h1>Daily Updates</h1>
-    <ul id="markdown-list" class="markdown-list"></ul>
+    <a href="../index.html" class="back-btn">← Back to Home</a>
+    
+    <div class="container">
+        <div class="header">
+            <h1>📝 Daily Form & Text Editor</h1>
+        </div>
+        
+        <div class="content">
+            <div class="upload-section" id="uploadSection">
+                <h3>📁 Upload Your File</h3>
+                <p>Drag and drop your .txt or .md file here, or click to browse</p>
+                
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" class="file-input" accept=".txt,.md">
+                    <button class="file-input-button">Choose File</button>
+                </div>
+                
+                <div class="file-info" id="fileInfo">
+                    <strong>File loaded:</strong> <span id="fileName"></span>
+                </div>
+            </div>
+            
+            <div class="editor-section">
+                <div class="editor-header">
+                    <h2 class="editor-title">✏️ Text Editor</h2>
+                    <div class="editor-controls">
+                        <button class="control-btn save" onclick="saveToLocalStorage()">💾 Save</button>
+                        <button class="control-btn clear" onclick="clearEditor()">🗑️ Clear</button>
+                        <button class="control-btn" onclick="downloadFile()">⬇️ Download</button>
+                    </div>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('editor')">Editor</button>
+                    <button class="tab" onclick="switchTab('preview')">Preview</button>
+                </div>
+                
+                <div id="editorTab">
+                    <textarea class="text-editor" id="textEditor" placeholder="Start typing your daily notes here...
 
-    <a href="../index.html" class="back-btn">Back to Home</a>
+You can:
+• Write in plain text or Markdown
+• Upload .txt or .md files
+• Save your work locally
+• Download your content
+• Preview Markdown formatting
+
+Your content will be cleared when you close this tab for privacy."></textarea>
+                </div>
+                
+                <div id="previewTab" class="preview-section">
+                    <div class="preview-content" id="previewContent">
+                        <p><em>Switch to Editor tab and add some content to see the preview here.</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>⚡ Powered by <strong>Canva AI</strong></p>
+        </div>
+    </div>
 
     <script>
-        // List of markdown files (add new files here when uploaded)
-        const markdownFiles = [
-            'daily1.md',
-            'daily2.md',
-            'daily3.md'
-        ];
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const textEditor = document.getElementById('textEditor');
+        const previewContent = document.getElementById('previewContent');
+        
+        let currentTab = 'editor';
 
-        const markdownList = document.getElementById('markdown-list');
-
-        // Dynamically create links for each markdown file
-        markdownFiles.forEach(file => {
-            const listItem = document.createElement('li');
-            const link = document.createElement('a');
-            link.href = `markdown/${file}`;
-            link.textContent = file.replace('.md', '');
-            listItem.appendChild(link);
-            markdownList.appendChild(listItem);
+        // File upload functionality
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // Drag and drop functionality
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
         });
-    </script>
-</body>
+        
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
 
-</html>
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            // Check file type
+            const validTypes = ['.txt', '.md'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validTypes.includes(fileExtension)) {
+                alert('Please upload only .txt or .md files');
+                return;
+            }
+
+            // Read file content
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                textEditor.value = e.target.result;
+                fileName.textContent = file.name;
+                fileInfo.style.display = 'block';
+                updatePreview();
+            };
+            reader.readAsText(file);
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide content
+            if (tab === 'editor') {
+                document.getElementById('editorTab').style.display = 'block';
+                document.getElementById('previewTab').style.display = 'none';
+            } else {
+                document.getElementById('editorTab').style.display = 'none';
+                document.getElementById('previewTab').style.display = 'block';
+                updatePreview();
+            }
+        }
+
+        // Update preview with basic Markdown rendering
+        function updatePreview() {
+            const content = textEditor.value;
+            let html = content
+                // Headers
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                // Bold and italic
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Code blocks
+                .replace(/
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98712e7a20a69998',t:'MTc1OTIwODY4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
