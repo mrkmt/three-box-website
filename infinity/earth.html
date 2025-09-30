@@ -189,10 +189,8 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // API Configuration
-        // NOTE: If you enter an invalid or expired OpenWeatherMap key, it will automatically fall back to DEMO data.
+        
         const WEATHER_CDD_KMT = '7ece1632f9b444dcbc595528253009'; 
-        // NOTE: This must remain an empty string for the Canvas environment to inject the key for Gemini APIs.
         const GEMINI_BDD_KMT = 'AIzaSyAo77ADwnkSB3xodxRq494c3vghBO71wls'; 
         const GEMINI_API_URL_FLASH = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_BDD_KMT}`;
         const GEMINI_API_URL_TTS = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_BDD_KMT}`;
