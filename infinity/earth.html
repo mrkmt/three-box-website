@@ -1,109 +1,341 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Earth with User Location</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-    }
-    canvas {
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Earth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            max-width: 300px;
+            z-index: 100;
+        }
+        
+        .location-status {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 100;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ffffff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .marker-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-  <script>
-    // --- Setup Scene ---
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div>Loading Earth...</div>
+    </div>
+    
+    <div class="info-panel">
+        <h3 class="text-lg font-bold mb-3 text-blue-300">🌍 Interactive Earth</h3>
+        <p class="text-sm text-gray-300 mb-2">• Move mouse to rotate</p>
+        <p class="text-sm text-gray-300 mb-2">• Gold marker shows your location</p>
+        <p class="text-sm text-gray-300">• Earth rotates with local time</p>
+        <div id="timeDisplay" class="mt-3 text-xs text-yellow-300 font-mono"></div>
+    </div>
+    
+    <div id="locationStatus" class="location-status">
+        📍 Detecting location...
+    </div>
 
-    // --- Load Earth Texture ---
-    const textureLoader = new THREE.TextureLoader();
-    const earthTexture = textureLoader.load(
-      "https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg"
-    );
-    const geometry = new THREE.SphereGeometry(2, 64, 64);
-    const material = new THREE.MeshStandardMaterial({ map: earthTexture });
-    const earth = new THREE.Mesh(geometry, material);
-    scene.add(earth);
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-    // --- Lighting ---
-    const light = new THREE.PointLight(0xffffff, 1.5);
-    light.position.set(5, 5, 5);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0x333333));
+        // Earth creation
+        const textureLoader = new THREE.TextureLoader();
+        let earth;
+        let userMarker;
+        
+        // Load Earth texture
+        textureLoader.load(
+            'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg',
+            (texture) => {
+                const geometry = new THREE.SphereGeometry(2, 64, 64);
+                const material = new THREE.MeshPhongMaterial({ 
+                    map: texture,
+                    shininess: 30,
+                    transparent: true,
+                    opacity: 0.95
+                });
+                earth = new THREE.Mesh(geometry, material);
+                earth.castShadow = true;
+                earth.receiveShadow = true;
+                scene.add(earth);
+                
+                // Hide loading screen
+                document.getElementById('loading').style.display = 'none';
+            },
+            undefined,
+            (error) => {
+                console.error('Error loading Earth texture:', error);
+                // Fallback: create Earth without texture
+                const geometry = new THREE.SphereGeometry(2, 64, 64);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: 0x4a90e2,
+                    shininess: 30
+                });
+                earth = new THREE.Mesh(geometry, material);
+                scene.add(earth);
+                document.getElementById('loading').style.display = 'none';
+            }
+        );
 
-    camera.position.z = 5;
+        // Enhanced lighting
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(5, 3, 5);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        scene.add(sunLight);
 
-    // --- Marker for user location ---
-    function addMarker(lat, lon) {
-      const markerGeometry = new THREE.SphereGeometry(0.05, 16, 16);
-      const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+        scene.add(ambientLight);
 
-      // Convert lat/lon to 3D position
-      const radius = 2; // same as Earth radius
-      const phi = (90 - lat) * (Math.PI / 180);
-      const theta = (lon + 180) * (Math.PI / 180);
+        // Add subtle rim lighting
+        const rimLight = new THREE.DirectionalLight(0x4a90e2, 0.3);
+        rimLight.position.set(-5, 0, -5);
+        scene.add(rimLight);
 
-      marker.position.x = -(radius * Math.sin(phi) * Math.cos(theta));
-      marker.position.y = radius * Math.cos(phi);
-      marker.position.z = radius * Math.sin(phi) * Math.sin(theta);
+        camera.position.z = 5;
 
-      scene.add(marker);
-    }
+        // User location marker
+        function addLocationMarker(lat, lon) {
+            // Remove existing marker
+            if (userMarker) {
+                scene.remove(userMarker);
+            }
 
-    // --- Geolocation API ---
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          console.log("User location:", latitude, longitude);
-          addMarker(latitude, longitude);
-        },
-        (err) => {
-          console.warn("Geolocation error:", err.message);
+            // Create glowing marker
+            const markerGroup = new THREE.Group();
+            
+            // Main marker
+            const markerGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+            const markerMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffd700,
+                transparent: true,
+                opacity: 0.9
+            });
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            
+            // Glow effect
+            const glowGeometry = new THREE.SphereGeometry(0.12, 16, 16);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffed4e,
+                transparent: true,
+                opacity: 0.3
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            
+            markerGroup.add(marker);
+            markerGroup.add(glow);
+
+            // Convert coordinates to 3D position
+            const radius = 2.02; // Slightly above Earth surface
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+
+            markerGroup.position.x = -(radius * Math.sin(phi) * Math.cos(theta));
+            markerGroup.position.y = radius * Math.cos(phi);
+            markerGroup.position.z = radius * Math.sin(phi) * Math.sin(theta);
+
+            scene.add(markerGroup);
+            userMarker = markerGroup;
+
+            // Update status
+            document.getElementById('locationStatus').innerHTML = 
+                `📍 Your location: ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
         }
-      );
-    } else {
-      alert("Geolocation not supported in this browser.");
-    }
 
-    // --- Parallax Effect ---
-    document.addEventListener("mousemove", (event) => {
-      const x = (event.clientX / window.innerWidth - 0.5) * 0.5;
-      const y = (event.clientY / window.innerHeight - 0.5) * 0.5;
-      earth.rotation.x = y;
-      earth.rotation.y = x;
-    });
+        // Geolocation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    addLocationMarker(latitude, longitude);
+                },
+                (error) => {
+                    console.warn('Geolocation error:', error.message);
+                    document.getElementById('locationStatus').innerHTML = 
+                        '📍 Location access denied';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        } else {
+            document.getElementById('locationStatus').innerHTML = 
+                '📍 Geolocation not supported';
+        }
 
-    // --- Animate ---
-    function animate() {
-      requestAnimationFrame(animate);
-      earth.rotation.y += 0.001; // slow spin
-      renderer.render(scene, camera);
-    }
-    animate();
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetRotationX = 0;
+        let targetRotationY = 0;
 
-    // --- Handle Resize ---
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
-</body>
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (event.clientY / window.innerHeight - 0.5) * 2;
+            
+            targetRotationX = mouseY * 0.3;
+            targetRotationY = mouseX * 0.3;
+        });
+
+        // Get timezone-based rotation
+        function getTimezoneRotation() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            // Calculate total time in seconds since midnight
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            
+            // Convert to rotation (24 hours = 2π radians)
+            const timeRotation = (totalSeconds / 86400) * Math.PI * 2;
+            
+            return timeRotation;
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (earth) {
+                // Smooth mouse interaction
+                earth.rotation.x += (targetRotationX - earth.rotation.x) * 0.05;
+                earth.rotation.y += (targetRotationY - earth.rotation.y) * 0.05;
+                
+                // Time-based rotation (Earth rotates based on local time)
+                const baseRotation = getTimezoneRotation();
+                earth.rotation.y = baseRotation + (targetRotationY * 0.3);
+                
+                // Update time display
+                const now = new Date();
+                const timeString = now.toLocaleTimeString();
+                const timezoneString = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                document.getElementById('timeDisplay').innerHTML = 
+                    `🕐 ${timeString}<br>📍 ${timezoneString}`;
+                
+                // Animate marker glow
+                if (userMarker) {
+                    const time = Date.now() * 0.003;
+                    userMarker.children[1].material.opacity = 0.2 + Math.sin(time) * 0.1;
+                    userMarker.children[1].scale.setScalar(1 + Math.sin(time * 1.5) * 0.1);
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Add stars background
+        function createStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({ 
+                color: 0xffffff, 
+                size: 1,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const starsVertices = [];
+            for (let i = 0; i < 1000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+        createStars();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98728fc893437ae1',t:'MTc1OTIyMzE1OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
