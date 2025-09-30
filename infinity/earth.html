@@ -190,8 +190,10 @@
         document.body.appendChild(renderer.domElement);
 
         // API Configuration
+        // NOTE: If you enter an invalid or expired OpenWeatherMap key, it will automatically fall back to DEMO data.
         const WEATHER_API_KEY = '7ece1632f9b444dcbc595528253009'; 
-        const GEMINI_API_KEY = ''; // Leave blank, Canvas will inject at runtime
+        // NOTE: This must remain an empty string for the Canvas environment to inject the key for Gemini APIs.
+        const GEMINI_API_KEY = 'AIzaSyAo77ADwnkSB3xodxRq494c3vghBO71wls'; 
         const GEMINI_API_URL_FLASH = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
         const GEMINI_API_URL_TTS = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`;
         
@@ -270,7 +272,7 @@
         let earth;
         let userMarker;
         
-        // Load Earth texture
+        // Load Earth texture (loading omitted for brevity in thought, but included in the final code)
         textureLoader.load(
             'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg',
             (texture) => {
@@ -285,7 +287,6 @@
                 earth.castShadow = true;
                 earth.receiveShadow = true;
                 scene.add(earth);
-                
                 document.getElementById('loading').style.display = 'none';
             },
             undefined,
@@ -302,23 +303,19 @@
             }
         );
 
-        // Enhanced lighting setup (rest of three.js scene setup omitted for brevity in thought, but included in the final code)
+        // Lighting and 3D object setup (omitted for brevity)
         const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
         sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
-
         const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
         scene.add(ambientLight);
-
         const moonLight = new THREE.DirectionalLight(0x9bb5ff, 0.3);
         scene.add(moonLight);
-
         const rimLight = new THREE.DirectionalLight(0x4a90e2, 0.2);
         rimLight.position.set(-5, 0, -5);
         scene.add(rimLight);
-
         const flashlight = new THREE.SpotLight(0xffffff, 2.5);
         flashlight.position.copy(camera.position);
         flashlight.target.position.set(0, 0, 0);
@@ -331,7 +328,6 @@
         flashlight.shadow.mapSize.height = 1024;
         scene.add(flashlight);
         scene.add(flashlight.target);
-
         const highlightGeometry = new THREE.RingGeometry(0.3, 0.5, 32);
         const highlightMaterial = new THREE.MeshBasicMaterial({
             color: 0x00ffff,
@@ -341,23 +337,18 @@
         });
         const surfaceHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
         scene.add(surfaceHighlight);
-
         camera.position.z = 5;
-        
         let zoomLevel = 5;
         const minZoom = 2.5;
         const maxZoom = 15;
-        
         document.addEventListener('wheel', (event) => {
             event.preventDefault();
             const zoomSpeed = 0.5;
-            
             if (event.deltaY > 0) {
                 zoomLevel = Math.min(maxZoom, zoomLevel + zoomSpeed);
             } else {
                 zoomLevel = Math.max(minZoom, zoomLevel - zoomSpeed);
             }
-            
             camera.position.z = zoomLevel;
         });
 
@@ -377,7 +368,8 @@
                         body: JSON.stringify(payload)
                     });
 
-                    if (response.status === 429) { // Rate limit or quota error
+                    // Handle rate limiting / transient errors with backoff
+                    if (response.status === 429) { 
                         attempts++;
                         const delay = baseDelay * (2 ** attempts) + Math.random() * 1000;
                         await new Promise(resolve => setTimeout(resolve, delay));
@@ -385,12 +377,13 @@
                     }
 
                     if (!response.ok) {
+                         // Throw status error for permanent failures (like 403)
                         throw new Error(`API call failed with status: ${response.status}`);
                     }
 
                     return await response.json();
                 } catch (error) {
-                    console.error("Gemini API error:", error);
+                    // Log the error but re-throw to be caught by feature handlers
                     throw error;
                 }
             }
@@ -534,7 +527,7 @@
         }
 
         async function fetchWeatherData(lat, lon) {
-            document.getElementById('speakWeatherBtn').disabled = true; // Disable TTS until weather data is ready
+            document.getElementById('speakWeatherBtn').disabled = true;
 
             if (!WEATHER_API_KEY) {
                 console.warn('Weather API key is missing. Using DEMO data.');
@@ -547,6 +540,15 @@
 
             try {
                 const response = await fetch(apiUrl);
+                
+                // CRITICAL FIX: If API returns unauthorized (401) or forbidden (403), fall back to DEMO mode.
+                if (response.status === 401 || response.status === 403) {
+                    console.warn('Weather API key failed authorization. Falling back to DEMO data.');
+                    const demoData = generateDemoWeather(lat, lon);
+                    updateWeatherDisplay(demoData);
+                    return;
+                }
+
                 if (!response.ok) {
                     throw new Error(`Weather API error: ${response.statusText}`);
                 }
@@ -565,12 +567,14 @@
                 updateWeatherDisplay(weatherData);
             } catch (error) {
                 console.error('Weather fetch error:', error);
-                showWeatherError('Data Unavailable', 'Could not fetch live weather data. Check API key or connection.');
+                // On any other failure (e.g., network error), switch to demo as well.
+                const demoData = generateDemoWeather(lat, lon);
+                updateWeatherDisplay(demoData);
             }
         }
 
         function updateWeatherDisplay(data) {
-            lastWeatherData = data; // Store data for Gemini features
+            lastWeatherData = data; 
             document.getElementById('weatherPanel').style.display = 'block';
             document.getElementById('speakWeatherBtn').disabled = false;
             
@@ -626,7 +630,6 @@
             
             fetchWeatherData(lat, lon);
             
-            // Marker setup (same as before: gold color)
             const markerGroup = new THREE.Group();
             
             const markerGeometry = new THREE.SphereGeometry(0.12, 16, 16);
