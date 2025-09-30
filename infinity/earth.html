@@ -37,6 +37,20 @@
             z-index: 100;
         }
         
+        .weather-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            max-width: 280px;
+            z-index: 100;
+        }
+        
         .location-status {
             position: absolute;
             bottom: 20px;
@@ -85,6 +99,25 @@
             50% { opacity: 0.7; transform: scale(1.2); }
             100% { opacity: 1; transform: scale(1); }
         }
+        
+        .weather-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .weather-item:last-child {
+            border-bottom: none;
+        }
+        
+        .temp-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
     </style>
 </head>
 <body>
@@ -103,6 +136,19 @@
         <div id="timeDisplay" class="mt-3 text-xs text-yellow-300 font-mono"></div>
     </div>
     
+    <div id="weatherPanel" class="weather-panel" style="display: none;">
+        <h3 class="text-lg font-bold mb-3 text-green-300">🌤️ Live Weather</h3>
+        <div id="weatherContent">
+            <div class="text-center mb-3">
+                <div id="weatherIcon" class="text-3xl mb-2">🌤️</div>
+                <div id="temperature" class="temp-display">--°</div>
+                <div id="description" class="text-sm text-gray-300 capitalize">Loading...</div>
+            </div>
+            <div id="weatherDetails"></div>
+            <div class="text-xs text-gray-400 mt-3" id="lastUpdated">Updating...</div>
+        </div>
+    </div>
+    
     <div id="locationStatus" class="location-status">
         📍 Detecting location...
     </div>
@@ -117,6 +163,25 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
+
+        // Weather API configuration
+        const WEATHER_API_KEY = 'demo'; // Using demo mode for this example
+        let userLat, userLon;
+        
+        // Weather icons mapping
+        const weatherIcons = {
+            'clear sky': '☀️',
+            'few clouds': '🌤️',
+            'scattered clouds': '⛅',
+            'broken clouds': '☁️',
+            'overcast clouds': '☁️',
+            'shower rain': '🌦️',
+            'rain': '🌧️',
+            'thunderstorm': '⛈️',
+            'snow': '❄️',
+            'mist': '🌫️',
+            'fog': '🌫️'
+        };
 
         // Earth creation
         const textureLoader = new THREE.TextureLoader();
@@ -272,6 +337,91 @@
             camera.position.z = zoomLevel;
         });
 
+        // Weather functions
+        async function fetchWeatherData(lat, lon) {
+            try {
+                // Using a demo weather service - in production, you'd use a real API like OpenWeatherMap
+                // For demo purposes, we'll simulate weather data based on location
+                const demoWeatherData = generateDemoWeather(lat, lon);
+                updateWeatherDisplay(demoWeatherData);
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                showWeatherError();
+            }
+        }
+
+        function generateDemoWeather(lat, lon) {
+            // Generate realistic demo weather based on location and time
+            const now = new Date();
+            const hour = now.getHours();
+            const season = Math.floor((now.getMonth() + 1) / 3);
+            
+            // Base temperature on latitude and season
+            let baseTemp = 20 - Math.abs(lat) * 0.5;
+            if (season === 0 || season === 3) baseTemp -= 10; // Winter
+            if (season === 2) baseTemp += 10; // Summer
+            
+            // Add daily variation
+            const dailyVariation = Math.sin((hour - 6) / 12 * Math.PI) * 8;
+            const temperature = Math.round(baseTemp + dailyVariation + (Math.random() - 0.5) * 6);
+            
+            const conditions = ['clear sky', 'few clouds', 'scattered clouds', 'overcast clouds', 'rain'];
+            const condition = conditions[Math.floor(Math.random() * conditions.length)];
+            
+            return {
+                temperature,
+                condition,
+                humidity: Math.round(40 + Math.random() * 40),
+                windSpeed: Math.round(Math.random() * 20),
+                pressure: Math.round(1000 + Math.random() * 50),
+                visibility: Math.round(5 + Math.random() * 15),
+                location: `${lat.toFixed(1)}°, ${lon.toFixed(1)}°`
+            };
+        }
+
+        function updateWeatherDisplay(data) {
+            document.getElementById('weatherPanel').style.display = 'block';
+            
+            const icon = weatherIcons[data.condition] || '🌤️';
+            document.getElementById('weatherIcon').textContent = icon;
+            document.getElementById('temperature').textContent = `${data.temperature}°C`;
+            document.getElementById('description').textContent = data.condition;
+            
+            const detailsHTML = `
+                <div class="weather-item">
+                    <span>💧 Humidity</span>
+                    <span>${data.humidity}%</span>
+                </div>
+                <div class="weather-item">
+                    <span>💨 Wind</span>
+                    <span>${data.windSpeed} km/h</span>
+                </div>
+                <div class="weather-item">
+                    <span>🌡️ Pressure</span>
+                    <span>${data.pressure} hPa</span>
+                </div>
+                <div class="weather-item">
+                    <span>👁️ Visibility</span>
+                    <span>${data.visibility} km</span>
+                </div>
+            `;
+            
+            document.getElementById('weatherDetails').innerHTML = detailsHTML;
+            document.getElementById('lastUpdated').textContent = 
+                `Updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        function showWeatherError() {
+            document.getElementById('weatherPanel').style.display = 'block';
+            document.getElementById('weatherContent').innerHTML = `
+                <div class="text-center text-red-300">
+                    <div class="text-2xl mb-2">⚠️</div>
+                    <div>Weather data unavailable</div>
+                    <div class="text-xs text-gray-400 mt-2">Check connection</div>
+                </div>
+            `;
+        }
+
         // User location marker
         function addLocationMarker(lat, lon) {
             // Remove existing marker
@@ -279,32 +429,60 @@
                 scene.remove(userMarker);
             }
 
-            // Create glowing marker
+            // Store coordinates for weather
+            userLat = lat;
+            userLon = lon;
+            
+            // Fetch weather data
+            fetchWeatherData(lat, lon);
+
+            // Create enhanced glowing marker
             const markerGroup = new THREE.Group();
             
-            // Main marker
-            const markerGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+            // Main marker (larger and brighter)
+            const markerGeometry = new THREE.SphereGeometry(0.12, 16, 16);
             const markerMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xffd700,
+                color: 0xff4444,
                 transparent: true,
-                opacity: 0.9
+                opacity: 1.0
             });
             const marker = new THREE.Mesh(markerGeometry, markerMaterial);
             
-            // Glow effect
-            const glowGeometry = new THREE.SphereGeometry(0.12, 16, 16);
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffed4e,
+            // Inner glow
+            const innerGlowGeometry = new THREE.SphereGeometry(0.18, 16, 16);
+            const innerGlowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff6666,
+                transparent: true,
+                opacity: 0.6
+            });
+            const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial);
+            
+            // Outer glow
+            const outerGlowGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+            const outerGlowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffaaaa,
                 transparent: true,
                 opacity: 0.3
             });
-            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
+            
+            // Pulsing ring
+            const ringGeometry = new THREE.RingGeometry(0.3, 0.35, 32);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
             
             markerGroup.add(marker);
-            markerGroup.add(glow);
+            markerGroup.add(innerGlow);
+            markerGroup.add(outerGlow);
+            markerGroup.add(ring);
 
             // Convert coordinates to 3D position
-            const radius = 2.02; // Slightly above Earth surface
+            const radius = 2.05; // Slightly higher above Earth surface
             const phi = (90 - lat) * (Math.PI / 180);
             const theta = (lon + 180) * (Math.PI / 180);
 
@@ -315,9 +493,46 @@
             scene.add(markerGroup);
             userMarker = markerGroup;
 
-            // Update status
+            // Auto-rotate Earth to show user location
+            rotateToLocation(lat, lon);
+
+            // Update status with "Go to Location" button
             document.getElementById('locationStatus').innerHTML = 
-                `📍 Your location: ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+                `📍 Your location: ${lat.toFixed(2)}°, ${lon.toFixed(2)}°<br>
+                <button onclick="rotateToLocation(${lat}, ${lon})" 
+                        style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; margin-top: 4px; cursor: pointer; font-size: 12px;">
+                    🎯 Center View
+                </button>`;
+        }
+
+        // Function to rotate Earth to show specific location
+        function rotateToLocation(lat, lon) {
+            // Calculate target rotation to center the location
+            const targetY = -(lon * Math.PI / 180);
+            const targetX = -(lat * Math.PI / 180) * 0.5;
+            
+            // Smooth rotation animation
+            const startRotationY = earth.rotation.y;
+            const startRotationX = earth.rotation.x;
+            const duration = 2000; // 2 seconds
+            const startTime = Date.now();
+            
+            function animateRotation() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function for smooth animation
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                
+                earth.rotation.y = startRotationY + (targetY - startRotationY) * easeProgress;
+                earth.rotation.x = startRotationX + (targetX - startRotationX) * easeProgress;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateRotation);
+                }
+            }
+            
+            animateRotation();
         }
 
         // Geolocation
@@ -331,6 +546,8 @@
                     console.warn('Geolocation error:', error.message);
                     document.getElementById('locationStatus').innerHTML = 
                         '📍 Location access denied';
+                    // Show demo weather for a default location
+                    fetchWeatherData(40.7128, -74.0060); // New York as fallback
                 },
                 {
                     enableHighAccuracy: true,
@@ -341,6 +558,7 @@
         } else {
             document.getElementById('locationStatus').innerHTML = 
                 '📍 Geolocation not supported';
+            fetchWeatherData(40.7128, -74.0060); // New York as fallback
         }
 
         // Mouse interaction
@@ -372,6 +590,13 @@
             
             return timeRotation;
         }
+
+        // Update weather periodically
+        setInterval(() => {
+            if (userLat && userLon) {
+                fetchWeatherData(userLat, userLon);
+            }
+        }, 300000); // Update every 5 minutes
 
         // Animation loop
         function animate() {
@@ -429,11 +654,23 @@
                 document.getElementById('timeDisplay').innerHTML = 
                     `${dayNightIcon} ${timeString}<br>📍 ${timezoneString}`;
                 
-                // Animate marker glow
+                // Animate marker glow and pulsing
                 if (userMarker) {
                     const time = Date.now() * 0.003;
-                    userMarker.children[1].material.opacity = 0.2 + Math.sin(time) * 0.1;
-                    userMarker.children[1].scale.setScalar(1 + Math.sin(time * 1.5) * 0.1);
+                    const fastTime = Date.now() * 0.008;
+                    
+                    // Animate all glow layers
+                    userMarker.children[1].material.opacity = 0.4 + Math.sin(time) * 0.2; // Inner glow
+                    userMarker.children[2].material.opacity = 0.2 + Math.sin(time * 0.8) * 0.1; // Outer glow
+                    userMarker.children[3].material.opacity = 0.6 + Math.sin(fastTime) * 0.3; // Ring
+                    
+                    // Scale animations
+                    userMarker.children[1].scale.setScalar(1 + Math.sin(time * 1.5) * 0.15);
+                    userMarker.children[2].scale.setScalar(1 + Math.sin(time * 1.2) * 0.1);
+                    userMarker.children[3].scale.setScalar(1 + Math.sin(fastTime * 2) * 0.2);
+                    
+                    // Rotate the ring
+                    userMarker.children[3].rotation.z += 0.02;
                 }
             }
             
@@ -472,5 +709,5 @@
         }
         createStars();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98729e0fa4527ae1',t:'MTc1OTIyMzc0NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9872b197d6d0fd81',t:'MTc1OTIyNDU0NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
