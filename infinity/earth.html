@@ -191,11 +191,11 @@
 
         // API Configuration
         // NOTE: If you enter an invalid or expired OpenWeatherMap key, it will automatically fall back to DEMO data.
-        const WEATHER_API_KEY = '7ece1632f9b444dcbc595528253009'; 
+        const WEATHER_CDD_KMT = '7ece1632f9b444dcbc595528253009'; 
         // NOTE: This must remain an empty string for the Canvas environment to inject the key for Gemini APIs.
-        const GEMINI_API_KEY = 'AIzaSyAo77ADwnkSB3xodxRq494c3vghBO71wls'; 
-        const GEMINI_API_URL_FLASH = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
-        const GEMINI_API_URL_TTS = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`;
+        const GEMINI_BDD_KMT = 'AIzaSyAo77ADwnkSB3xodxRq494c3vghBO71wls'; 
+        const GEMINI_API_URL_FLASH = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_BDD_KMT}`;
+        const GEMINI_API_URL_TTS = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_BDD_KMT}`;
         
         let userLat, userLon;
         let lastWeatherData = null;
@@ -529,14 +529,14 @@
         async function fetchWeatherData(lat, lon) {
             document.getElementById('speakWeatherBtn').disabled = true;
 
-            if (!WEATHER_API_KEY) {
+            if (!WEATHER_CDD_KMT) {
                 console.warn('Weather API key is missing. Using DEMO data.');
                 const demoData = generateDemoWeather(lat, lon);
                 updateWeatherDisplay(demoData);
                 return;
             }
 
-            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&units=metric`;
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_CDD_KMT}&units=metric`;
 
             try {
                 const response = await fetch(apiUrl);
