@@ -95,9 +95,11 @@
     
     <div class="info-panel">
         <h3 class="text-lg font-bold mb-3 text-blue-300">🌍 Interactive Earth</h3>
-        <p class="text-sm text-gray-300 mb-2">• Move mouse to rotate</p>
+        <p class="text-sm text-gray-300 mb-2">• Move mouse to explore surface</p>
+        <p class="text-sm text-gray-300 mb-2">• Scroll to zoom in/out</p>
         <p class="text-sm text-gray-300 mb-2">• Gold marker shows your location</p>
-        <p class="text-sm text-gray-300">• Earth rotates with local time</p>
+        <p class="text-sm text-gray-300 mb-2">• Flashlight illuminates viewing area</p>
+        <p class="text-sm text-gray-300">• Day/night cycle matches local time</p>
         <div id="timeDisplay" class="mt-3 text-xs text-yellow-300 font-mono"></div>
     </div>
     
@@ -155,23 +157,120 @@
             }
         );
 
-        // Enhanced lighting
+        // Enhanced lighting with day/night cycle
         const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        sunLight.position.set(5, 3, 5);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
         sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
 
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
         scene.add(ambientLight);
 
+        // Moon light for night time
+        const moonLight = new THREE.DirectionalLight(0x9bb5ff, 0.3);
+        scene.add(moonLight);
+
         // Add subtle rim lighting
-        const rimLight = new THREE.DirectionalLight(0x4a90e2, 0.3);
+        const rimLight = new THREE.DirectionalLight(0x4a90e2, 0.2);
         rimLight.position.set(-5, 0, -5);
         scene.add(rimLight);
+        
+        // Function to update lighting based on time
+        function updateDayNightLighting() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const totalHours = hours + minutes / 60;
+            
+            // Calculate sun position based on time (sunrise ~6am, sunset ~6pm)
+            const sunAngle = ((totalHours - 6) / 12) * Math.PI;
+            const sunHeight = Math.sin(sunAngle);
+            
+            // Position sun light
+            sunLight.position.set(
+                Math.cos(sunAngle) * 8,
+                sunHeight * 5,
+                Math.sin(sunAngle) * 3
+            );
+            
+            // Position moon light (opposite to sun)
+            moonLight.position.set(
+                -Math.cos(sunAngle) * 8,
+                -sunHeight * 5,
+                -Math.sin(sunAngle) * 3
+            );
+            
+            // Adjust light intensities based on time of day
+            if (totalHours >= 6 && totalHours <= 18) {
+                // Daytime
+                const dayIntensity = Math.max(0.3, sunHeight);
+                sunLight.intensity = dayIntensity * 1.5;
+                moonLight.intensity = 0.1;
+                ambientLight.intensity = 0.3;
+                
+                // Warmer colors during sunrise/sunset
+                if (totalHours < 8 || totalHours > 16) {
+                    sunLight.color.setHex(0xffa500); // Orange
+                    ambientLight.color.setHex(0x4a4a6a);
+                } else {
+                    sunLight.color.setHex(0xffffff); // White
+                    ambientLight.color.setHex(0x404040);
+                }
+            } else {
+                // Nighttime
+                sunLight.intensity = 0.1;
+                moonLight.intensity = 0.4;
+                ambientLight.intensity = 0.15;
+                ambientLight.color.setHex(0x2a2a4a); // Blue tint for night
+            }
+        }
+
+        // Flashlight effect - spotlight that follows camera view
+        const flashlight = new THREE.SpotLight(0xffffff, 2.5);
+        flashlight.position.copy(camera.position);
+        flashlight.target.position.set(0, 0, 0);
+        flashlight.angle = Math.PI / 6; // 30 degree cone
+        flashlight.penumbra = 0.3; // Soft edges
+        flashlight.decay = 1;
+        flashlight.distance = 10;
+        flashlight.castShadow = true;
+        flashlight.shadow.mapSize.width = 1024;
+        flashlight.shadow.mapSize.height = 1024;
+        scene.add(flashlight);
+        scene.add(flashlight.target);
+
+        // Surface highlight circle
+        const highlightGeometry = new THREE.RingGeometry(0.3, 0.5, 32);
+        const highlightMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide
+        });
+        const surfaceHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+        scene.add(surfaceHighlight);
 
         camera.position.z = 5;
+        
+        // Zoom controls
+        let zoomLevel = 5;
+        const minZoom = 2.5;
+        const maxZoom = 15;
+        
+        // Mouse wheel zoom
+        document.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const zoomSpeed = 0.5;
+            
+            if (event.deltaY > 0) {
+                zoomLevel = Math.min(maxZoom, zoomLevel + zoomSpeed);
+            } else {
+                zoomLevel = Math.max(minZoom, zoomLevel - zoomSpeed);
+            }
+            
+            camera.position.z = zoomLevel;
+        });
 
         // User location marker
         function addLocationMarker(lat, lon) {
@@ -279,6 +378,9 @@
             requestAnimationFrame(animate);
             
             if (earth) {
+                // Update day/night lighting
+                updateDayNightLighting();
+                
                 // Smooth mouse interaction
                 earth.rotation.x += (targetRotationX - earth.rotation.x) * 0.05;
                 earth.rotation.y += (targetRotationY - earth.rotation.y) * 0.05;
@@ -287,12 +389,45 @@
                 const baseRotation = getTimezoneRotation();
                 earth.rotation.y = baseRotation + (targetRotationY * 0.3);
                 
-                // Update time display
+                // Update flashlight position to follow camera
+                flashlight.position.copy(camera.position);
+                
+                // Calculate surface point where user is looking
+                const raycaster = new THREE.Raycaster();
+                const mouse = new THREE.Vector2(mouseX * 0.5, -mouseY * 0.5);
+                raycaster.setFromCamera(mouse, camera);
+                
+                if (earth) {
+                    const intersects = raycaster.intersectObject(earth);
+                    if (intersects.length > 0) {
+                        const intersectionPoint = intersects[0].point;
+                        
+                        // Position surface highlight at intersection point
+                        surfaceHighlight.position.copy(intersectionPoint);
+                        surfaceHighlight.lookAt(camera.position);
+                        surfaceHighlight.visible = true;
+                        
+                        // Make flashlight target the intersection point
+                        flashlight.target.position.copy(intersectionPoint);
+                        
+                        // Animate highlight
+                        const time = Date.now() * 0.005;
+                        surfaceHighlight.material.opacity = 0.3 + Math.sin(time) * 0.1;
+                        surfaceHighlight.rotation.z += 0.02;
+                    } else {
+                        surfaceHighlight.visible = false;
+                    }
+                }
+                
+                // Update time display with day/night indicator
                 const now = new Date();
                 const timeString = now.toLocaleTimeString();
                 const timezoneString = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const hours = now.getHours();
+                const dayNightIcon = (hours >= 6 && hours <= 18) ? '☀️' : '🌙';
+                
                 document.getElementById('timeDisplay').innerHTML = 
-                    `🕐 ${timeString}<br>📍 ${timezoneString}`;
+                    `${dayNightIcon} ${timeString}<br>📍 ${timezoneString}`;
                 
                 // Animate marker glow
                 if (userMarker) {
@@ -337,5 +472,5 @@
         }
         createStars();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98728fc893437ae1',t:'MTc1OTIyMzE1OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98729e0fa4527ae1',t:'MTc1OTIyMzc0NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
