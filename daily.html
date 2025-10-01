@@ -450,49 +450,59 @@
                 return;
             }
 
+            // Validate URL format
+            if (!sheetdbUrl.includes('sheetdb.io')) {
+                showStatus('Please enter a valid SheetDB URL (should contain "sheetdb.io")', 'error');
+                return;
+            }
+
             const saveBtn = document.getElementById('saveBtn');
             const originalText = saveBtn.innerHTML;
             saveBtn.innerHTML = '⏳ Saving...';
             saveBtn.disabled = true;
 
             try {
-                // Collect form data
+                // Collect form data - convert booleans to readable text
                 const formData = {
-                    date: new Date().toISOString().split('T')[0],
-                    timestamp: new Date().toISOString(),
-                    
-                    // Morning routine
-                    wake_up_early: document.getElementById('morning1').checked,
-                    drink_water: document.getElementById('morning2').checked,
-                    exercise: document.getElementById('morning3').checked,
-                    healthy_breakfast: document.getElementById('morning4').checked,
-                    
-                    // Work & productivity
-                    plan_day: document.getElementById('work1').checked,
-                    focus_work: document.getElementById('work2').checked,
-                    check_emails: document.getElementById('work3').checked,
-                    learn_something: document.getElementById('work4').checked,
-                    
-                    // Personal & health
-                    drink_enough_water: document.getElementById('personal1').checked,
-                    healthy_meals: document.getElementById('personal2').checked,
-                    connect_people: document.getElementById('personal3').checked,
-                    tidy_space: document.getElementById('personal4').checked,
-                    
-                    // Evening routine
-                    reflect_day: document.getElementById('evening1').checked,
-                    prepare_tomorrow: document.getElementById('evening2').checked,
-                    no_screens: document.getElementById('evening3').checked,
-                    sleep_early: document.getElementById('evening4').checked,
-                    
-                    // Notes and progress
-                    daily_notes: document.getElementById('dailyNotes').value,
-                    completed_tasks: document.querySelectorAll('.checkbox:checked').length,
-                    total_tasks: document.querySelectorAll('.checkbox').length,
-                    completion_percentage: Math.round((document.querySelectorAll('.checkbox:checked').length / document.querySelectorAll('.checkbox').length) * 100)
+                    data: {
+                        Date: new Date().toLocaleDateString(),
+                        Timestamp: new Date().toLocaleString(),
+                        
+                        // Morning routine
+                        'Wake Up Early': document.getElementById('morning1').checked ? 'Yes' : 'No',
+                        'Drink Water': document.getElementById('morning2').checked ? 'Yes' : 'No',
+                        'Exercise': document.getElementById('morning3').checked ? 'Yes' : 'No',
+                        'Healthy Breakfast': document.getElementById('morning4').checked ? 'Yes' : 'No',
+                        
+                        // Work & productivity
+                        'Plan Day': document.getElementById('work1').checked ? 'Yes' : 'No',
+                        'Focus Work': document.getElementById('work2').checked ? 'Yes' : 'No',
+                        'Check Emails': document.getElementById('work3').checked ? 'Yes' : 'No',
+                        'Learn Something': document.getElementById('work4').checked ? 'Yes' : 'No',
+                        
+                        // Personal & health
+                        'Drink Enough Water': document.getElementById('personal1').checked ? 'Yes' : 'No',
+                        'Healthy Meals': document.getElementById('personal2').checked ? 'Yes' : 'No',
+                        'Connect People': document.getElementById('personal3').checked ? 'Yes' : 'No',
+                        'Tidy Space': document.getElementById('personal4').checked ? 'Yes' : 'No',
+                        
+                        // Evening routine
+                        'Reflect Day': document.getElementById('evening1').checked ? 'Yes' : 'No',
+                        'Prepare Tomorrow': document.getElementById('evening2').checked ? 'Yes' : 'No',
+                        'No Screens': document.getElementById('evening3').checked ? 'Yes' : 'No',
+                        'Sleep Early': document.getElementById('evening4').checked ? 'Yes' : 'No',
+                        
+                        // Summary
+                        'Daily Notes': document.getElementById('dailyNotes').value || 'No notes',
+                        'Completed Tasks': document.querySelectorAll('.checkbox:checked').length,
+                        'Total Tasks': document.querySelectorAll('.checkbox').length,
+                        'Completion %': Math.round((document.querySelectorAll('.checkbox:checked').length / document.querySelectorAll('.checkbox').length) * 100) + '%'
+                    }
                 };
 
-                // Send to SheetDB
+                console.log('Sending data to SheetDB:', formData);
+
+                // Send to SheetDB with proper format
                 const response = await fetch(sheetdbUrl, {
                     method: 'POST',
                     headers: {
@@ -502,17 +512,34 @@
                     body: JSON.stringify(formData)
                 });
 
+                const responseText = await response.text();
+                console.log('SheetDB response:', response.status, responseText);
+
                 if (response.ok) {
                     showStatus('✅ Daily checklist saved successfully to your Google Sheet!', 'success');
-                    // Optionally clear form after successful save
-                    // clearForm();
+                    // Save successful submission to prevent duplicates
+                    localStorage.setItem('lastSubmissionDate', new Date().toDateString());
                 } else {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    let errorMessage = '❌ Error saving to sheet. ';
+                    if (response.status === 401) {
+                        errorMessage += 'Check your SheetDB API URL permissions.';
+                    } else if (response.status === 404) {
+                        errorMessage += 'SheetDB URL not found. Please verify your URL.';
+                    } else {
+                        errorMessage += `Server responded with status ${response.status}. ${responseText}`;
+                    }
+                    showStatus(errorMessage, 'error');
                 }
 
             } catch (error) {
                 console.error('Error saving to sheet:', error);
-                showStatus('❌ Error saving to sheet. Please check your SheetDB URL and try again.', 'error');
+                let errorMessage = '❌ Connection error. ';
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage += 'Please check your internet connection and SheetDB URL.';
+                } else {
+                    errorMessage += 'Please try again or check your SheetDB configuration.';
+                }
+                showStatus(errorMessage, 'error');
             } finally {
                 saveBtn.innerHTML = originalText;
                 saveBtn.disabled = false;
@@ -575,5 +602,5 @@
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9879d3ece7392095',t:'MTc1OTI5OTM1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9879deb4e2472095',t:'MTc1OTI5OTc5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
