@@ -296,6 +296,22 @@
                 <small style="display: block; margin-top: 5px; color: #6c757d;">
                     Get your API URL from <a href="https://sheetdb.io" target="_blank" rel="noopener noreferrer">SheetDB.io</a>
                 </small>
+                
+                <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
+                    <strong>🔧 Setup Instructions:</strong>
+                    <ol style="margin: 8px 0; padding-left: 20px; font-size: 14px;">
+                        <li>Create a new Google Sheet or open an existing one</li>
+                        <li>Add column headers in the first row (see button below)</li>
+                        <li>Connect your sheet to SheetDB and get the API URL</li>
+                        <li>Paste the URL above and test the connection</li>
+                    </ol>
+                    <button type="button" id="setupHeadersBtn" class="control-btn" style="margin-top: 10px; font-size: 14px; padding: 8px 16px; min-width: auto;">
+                        📋 Setup Sheet Headers
+                    </button>
+                    <button type="button" id="testConnectionBtn" class="control-btn" style="margin-top: 10px; margin-left: 10px; font-size: 14px; padding: 8px 16px; min-width: auto;">
+                        🔗 Test Connection
+                    </button>
+                </div>
             </div>
 
             <form class="checklist-form" id="checklistForm">
@@ -421,6 +437,93 @@
         // Save SheetDB URL when changed
         document.getElementById('sheetdbUrl').addEventListener('change', function() {
             localStorage.setItem('sheetdbUrl', this.value);
+        });
+
+        // Setup headers button
+        document.getElementById('setupHeadersBtn').addEventListener('click', function() {
+            const headers = [
+                'Date', 'Timestamp', 'Wake Up Early', 'Drink Water', 'Exercise', 'Healthy Breakfast',
+                'Plan Day', 'Focus Work', 'Check Emails', 'Learn Something', 'Drink Enough Water',
+                'Healthy Meals', 'Connect People', 'Tidy Space', 'Reflect Day', 'Prepare Tomorrow',
+                'No Screens', 'Sleep Early', 'Daily Notes', 'Completed Tasks', 'Total Tasks', 'Completion %'
+            ];
+            
+            const headerText = headers.join('\t');
+            navigator.clipboard.writeText(headerText).then(() => {
+                showStatus('📋 Headers copied to clipboard! Paste them in row 1 of your Google Sheet.', 'success');
+            }).catch(() => {
+                // Fallback - show headers in alert
+                alert('Copy these headers to row 1 of your Google Sheet:\n\n' + headers.join(' | '));
+            });
+        });
+
+        // Test connection button
+        document.getElementById('testConnectionBtn').addEventListener('click', async function() {
+            const sheetdbUrl = document.getElementById('sheetdbUrl').value.trim();
+            if (!sheetdbUrl) {
+                showStatus('Please enter your SheetDB URL first!', 'error');
+                return;
+            }
+
+            const testBtn = this;
+            const originalText = testBtn.innerHTML;
+            testBtn.innerHTML = '⏳ Testing...';
+            testBtn.disabled = true;
+
+            try {
+                // Send a test request to check if the sheet is properly configured
+                const testData = {
+                    data: {
+                        Date: 'TEST',
+                        Timestamp: 'TEST',
+                        'Wake Up Early': 'TEST',
+                        'Drink Water': 'TEST',
+                        'Exercise': 'TEST',
+                        'Healthy Breakfast': 'TEST',
+                        'Plan Day': 'TEST',
+                        'Focus Work': 'TEST',
+                        'Check Emails': 'TEST',
+                        'Learn Something': 'TEST',
+                        'Drink Enough Water': 'TEST',
+                        'Healthy Meals': 'TEST',
+                        'Connect People': 'TEST',
+                        'Tidy Space': 'TEST',
+                        'Reflect Day': 'TEST',
+                        'Prepare Tomorrow': 'TEST',
+                        'No Screens': 'TEST',
+                        'Sleep Early': 'TEST',
+                        'Daily Notes': 'TEST ROW - DELETE THIS',
+                        'Completed Tasks': 'TEST',
+                        'Total Tasks': 'TEST',
+                        'Completion %': 'TEST'
+                    }
+                };
+
+                const response = await fetch(sheetdbUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                if (response.ok) {
+                    showStatus('✅ Connection successful! Your sheet is ready. You can delete the test row.', 'success');
+                } else {
+                    const errorText = await response.text();
+                    if (errorText.includes('empty')) {
+                        showStatus('❌ Sheet needs headers! Click "Setup Sheet Headers" and add them to row 1.', 'error');
+                    } else {
+                        showStatus(`❌ Connection failed: ${errorText}`, 'error');
+                    }
+                }
+            } catch (error) {
+                showStatus('❌ Connection error. Check your URL and internet connection.', 'error');
+            } finally {
+                testBtn.innerHTML = originalText;
+                testBtn.disabled = false;
+            }
         });
 
         // Progress tracking
@@ -602,5 +705,5 @@
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9879deb4e2472095',t:'MTc1OTI5OTc5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9879f83284628e63',t:'MTc1OTMwMDgzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
