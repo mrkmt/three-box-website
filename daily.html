@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Form - My Space</title>
+    <title>Daily Checklist - My Space</title>
     <style>
         body {
             box-sizing: border-box;
@@ -16,7 +16,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
             background: white;
             border-radius: 16px;
@@ -37,116 +37,121 @@
             font-weight: 300;
         }
 
+        .date-display {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
         .content {
             padding: 40px;
         }
 
-        .upload-section {
+        .checklist-form {
             background: #f8f9fa;
             border-radius: 12px;
             padding: 30px;
             margin-bottom: 30px;
-            border: 2px dashed #dee2e6;
-            text-align: center;
-            transition: all 0.3s ease;
         }
 
-        .upload-section:hover {
-            border-color: #4facfe;
-            background: #f0f8ff;
+        .form-section {
+            margin-bottom: 30px;
         }
 
-        .upload-section.dragover {
-            border-color: #4facfe;
-            background: #e3f2fd;
-            transform: scale(1.02);
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4facfe;
         }
 
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            margin: 20px 0;
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
         }
 
-        .file-input {
-            position: absolute;
-            opacity: 0;
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #4facfe;
+        }
+
+        .checkbox-label {
+            flex: 1;
+            font-size: 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox:checked + .checkbox-label {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+
+        .notes-section {
+            margin-top: 20px;
+        }
+
+        .notes-textarea {
             width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        .file-input-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 30px;
-            border-radius: 50px;
-            border: none;
-            font-size: 1.1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .file-input-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
-        .file-info {
-            margin-top: 15px;
-            padding: 10px;
-            background: #e8f5e8;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #dee2e6;
             border-radius: 8px;
-            color: #2e7d32;
-            display: none;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            transition: border-color 0.3s ease;
         }
 
-        .editor-section {
+        .notes-textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .form-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
             margin-top: 30px;
         }
 
-        .editor-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .editor-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .editor-controls {
-            display: flex;
-            gap: 10px;
-        }
-
         .control-btn {
-            background: #6c757d;
+            background: #4facfe;
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 12px 24px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-weight: 500;
             transition: all 0.3s ease;
+            min-width: 120px;
         }
 
         .control-btn:hover {
-            background: #5a6268;
-            transform: translateY(-1px);
+            background: #3a8bfd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
         }
 
-        .control-btn.save {
-            background: #28a745;
-        }
-
-        .control-btn.save:hover {
-            background: #218838;
+        .control-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .control-btn.clear {
@@ -157,60 +162,48 @@
             background: #c82333;
         }
 
-        .text-editor {
-            width: 100%;
-            min-height: 400px;
-            padding: 20px;
-            border: 2px solid #dee2e6;
-            border-radius: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            resize: vertical;
-            transition: border-color 0.3s ease;
-            background: #fafafa;
-        }
-
-        .text-editor:focus {
-            outline: none;
-            border-color: #4facfe;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
-        }
-
-        .preview-section {
-            margin-top: 30px;
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 500;
             display: none;
         }
 
-        .preview-content {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 30px;
-            border-left: 4px solid #4facfe;
-            font-family: Georgia, serif;
-            line-height: 1.8;
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
-        .preview-content h1, .preview-content h2, .preview-content h3 {
-            color: #333;
-            margin-top: 0;
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
-        .preview-content pre {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            margin: 20px 0;
+            overflow: hidden;
         }
 
-        .preview-content code {
-            background: #e2e8f0;
-            color: #2d3748;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.9em;
+        .progress-fill {
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 500;
+            color: #495057;
         }
 
         .back-btn {
@@ -234,32 +227,6 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 4px;
-        }
-
-        .tab {
-            flex: 1;
-            padding: 12px 20px;
-            text-align: center;
-            background: transparent;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .tab.active {
-            background: white;
-            color: #4facfe;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
         .footer {
             background: #f8f9fa;
             padding: 20px;
@@ -274,6 +241,23 @@
             font-weight: 600;
         }
 
+        .api-config {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .api-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
         @media (max-width: 768px) {
             .content {
                 padding: 20px;
@@ -283,15 +267,14 @@
                 font-size: 2rem;
             }
             
-            .editor-header {
+            .form-controls {
                 flex-direction: column;
-                gap: 15px;
-                align-items: flex-start;
+                align-items: center;
             }
             
-            .editor-controls {
+            .control-btn {
                 width: 100%;
-                justify-content: center;
+                max-width: 200px;
             }
         }
     </style>
@@ -301,58 +284,118 @@
     
     <div class="container">
         <div class="header">
-            <h1>📝 Daily Form & Text Editor</h1>
+            <h1>✅ Daily Checklist</h1>
+            <div class="date-display" id="currentDate"></div>
         </div>
         
         <div class="content">
-            <div class="upload-section" id="uploadSection">
-                <h3>📁 Upload Your File</h3>
-                <p>Drag and drop your .txt or .md file here, or click to browse</p>
-                
-                <div class="file-input-wrapper">
-                    <input type="file" id="fileInput" class="file-input" accept=".txt,.md">
-                    <button class="file-input-button">Choose File</button>
-                </div>
-                
-                <div class="file-info" id="fileInfo">
-                    <strong>File loaded:</strong> <span id="fileName"></span>
-                </div>
+            <div class="api-config">
+                <strong>📊 SheetDB Configuration</strong>
+                <p>Enter your SheetDB API URL to save data to Google Sheets:</p>
+                <input type="url" id="sheetdbUrl" class="api-input" placeholder="https://sheetdb.io/api/v1/YOUR_SHEET_ID" value="">
+                <small style="display: block; margin-top: 5px; color: #6c757d;">
+                    Get your API URL from <a href="https://sheetdb.io" target="_blank" rel="noopener noreferrer">SheetDB.io</a>
+                </small>
             </div>
-            
-            <div class="editor-section">
-                <div class="editor-header">
-                    <h2 class="editor-title">✏️ Text Editor</h2>
-                    <div class="editor-controls">
-                        <button class="control-btn save" onclick="saveToLocalStorage()">💾 Save</button>
-                        <button class="control-btn clear" onclick="clearEditor()">🗑️ Clear</button>
-                        <button class="control-btn" onclick="downloadFile()">⬇️ Download</button>
+
+            <form class="checklist-form" id="checklistForm">
+                <div class="form-section">
+                    <h3 class="section-title">🌅 Morning Routine</h3>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="morning1" class="checkbox" name="morning_routine" value="wake_up_early">
+                        <label for="morning1" class="checkbox-label">Wake up early (before 7 AM)</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="morning2" class="checkbox" name="morning_routine" value="drink_water">
+                        <label for="morning2" class="checkbox-label">Drink a glass of water</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="morning3" class="checkbox" name="morning_routine" value="exercise">
+                        <label for="morning3" class="checkbox-label">Exercise or stretch (15+ minutes)</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="morning4" class="checkbox" name="morning_routine" value="healthy_breakfast">
+                        <label for="morning4" class="checkbox-label">Eat a healthy breakfast</label>
                     </div>
                 </div>
-                
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('editor')">Editor</button>
-                    <button class="tab" onclick="switchTab('preview')">Preview</button>
-                </div>
-                
-                <div id="editorTab">
-                    <textarea class="text-editor" id="textEditor" placeholder="Start typing your daily notes here...
 
-You can:
-• Write in plain text or Markdown
-• Upload .txt or .md files
-• Save your work locally
-• Download your content
-• Preview Markdown formatting
-
-Your content will be cleared when you close this tab for privacy."></textarea>
-                </div>
-                
-                <div id="previewTab" class="preview-section">
-                    <div class="preview-content" id="previewContent">
-                        <p><em>Switch to Editor tab and add some content to see the preview here.</em></p>
+                <div class="form-section">
+                    <h3 class="section-title">💼 Work & Productivity</h3>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="work1" class="checkbox" name="work_productivity" value="plan_day">
+                        <label for="work1" class="checkbox-label">Plan the day's priorities</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="work2" class="checkbox" name="work_productivity" value="focus_work">
+                        <label for="work2" class="checkbox-label">Complete 2+ hours of focused work</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="work3" class="checkbox" name="work_productivity" value="check_emails">
+                        <label for="work3" class="checkbox-label">Check and respond to emails</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="work4" class="checkbox" name="work_productivity" value="learn_something">
+                        <label for="work4" class="checkbox-label">Learn something new (30+ minutes)</label>
                     </div>
                 </div>
-            </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">🏠 Personal & Health</h3>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="personal1" class="checkbox" name="personal_health" value="drink_enough_water">
+                        <label for="personal1" class="checkbox-label">Drink 8+ glasses of water</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="personal2" class="checkbox" name="personal_health" value="healthy_meals">
+                        <label for="personal2" class="checkbox-label">Eat 3 healthy meals</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="personal3" class="checkbox" name="personal_health" value="connect_people">
+                        <label for="personal3" class="checkbox-label">Connect with family/friends</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="personal4" class="checkbox" name="personal_health" value="tidy_space">
+                        <label for="personal4" class="checkbox-label">Tidy up living/work space</label>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">🌙 Evening Routine</h3>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="evening1" class="checkbox" name="evening_routine" value="reflect_day">
+                        <label for="evening1" class="checkbox-label">Reflect on the day</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="evening2" class="checkbox" name="evening_routine" value="prepare_tomorrow">
+                        <label for="evening2" class="checkbox-label">Prepare for tomorrow</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="evening3" class="checkbox" name="evening_routine" value="no_screens">
+                        <label for="evening3" class="checkbox-label">No screens 1 hour before bed</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="evening4" class="checkbox" name="evening_routine" value="sleep_early">
+                        <label for="evening4" class="checkbox-label">Go to bed before 11 PM</label>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0 of 16 tasks completed (0%)</div>
+
+                <div class="notes-section">
+                    <h3 class="section-title">📝 Daily Notes</h3>
+                    <textarea class="notes-textarea" id="dailyNotes" name="daily_notes" placeholder="Write your thoughts, achievements, challenges, or anything noteworthy about today..."></textarea>
+                </div>
+
+                <div class="form-controls">
+                    <button type="submit" class="control-btn" id="saveBtn">💾 Save to Sheet</button>
+                    <button type="button" class="control-btn clear" onclick="clearForm()">🗑️ Clear All</button>
+                </div>
+
+                <div class="status-message" id="statusMessage"></div>
+            </form>
         </div>
         
         <div class="footer">
@@ -361,95 +404,176 @@ Your content will be cleared when you close this tab for privacy."></textarea>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const uploadSection = document.getElementById('uploadSection');
-        const fileInfo = document.getElementById('fileInfo');
-        const fileName = document.getElementById('fileName');
-        const textEditor = document.getElementById('textEditor');
-        const previewContent = document.getElementById('previewContent');
-        
-        let currentTab = 'editor';
-
-        // File upload functionality
-        fileInput.addEventListener('change', handleFileSelect);
-        
-        // Drag and drop functionality
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadSection.classList.add('dragover');
-        });
-        
-        uploadSection.addEventListener('dragleave', () => {
-            uploadSection.classList.remove('dragover');
-        });
-        
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadSection.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFile(files[0]);
-            }
+        // Set current date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
 
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                handleFile(file);
-            }
+        // Load saved SheetDB URL
+        const savedUrl = localStorage.getItem('sheetdbUrl');
+        if (savedUrl) {
+            document.getElementById('sheetdbUrl').value = savedUrl;
         }
 
-        function handleFile(file) {
-            // Check file type
-            const validTypes = ['.txt', '.md'];
-            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        // Save SheetDB URL when changed
+        document.getElementById('sheetdbUrl').addEventListener('change', function() {
+            localStorage.setItem('sheetdbUrl', this.value);
+        });
+
+        // Progress tracking
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.checkbox');
+            const checked = document.querySelectorAll('.checkbox:checked');
+            const total = checkboxes.length;
+            const completed = checked.length;
+            const percentage = Math.round((completed / total) * 100);
+
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = `${completed} of ${total} tasks completed (${percentage}%)`;
+        }
+
+        // Add event listeners to all checkboxes
+        document.querySelectorAll('.checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateProgress);
+        });
+
+        // Form submission
+        document.getElementById('checklistForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            if (!validTypes.includes(fileExtension)) {
-                alert('Please upload only .txt or .md files');
+            const sheetdbUrl = document.getElementById('sheetdbUrl').value.trim();
+            if (!sheetdbUrl) {
+                showStatus('Please enter your SheetDB API URL first!', 'error');
                 return;
             }
 
-            // Read file content
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                textEditor.value = e.target.result;
-                fileName.textContent = file.name;
-                fileInfo.style.display = 'block';
-                updatePreview();
-            };
-            reader.readAsText(file);
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '⏳ Saving...';
+            saveBtn.disabled = true;
+
+            try {
+                // Collect form data
+                const formData = {
+                    date: new Date().toISOString().split('T')[0],
+                    timestamp: new Date().toISOString(),
+                    
+                    // Morning routine
+                    wake_up_early: document.getElementById('morning1').checked,
+                    drink_water: document.getElementById('morning2').checked,
+                    exercise: document.getElementById('morning3').checked,
+                    healthy_breakfast: document.getElementById('morning4').checked,
+                    
+                    // Work & productivity
+                    plan_day: document.getElementById('work1').checked,
+                    focus_work: document.getElementById('work2').checked,
+                    check_emails: document.getElementById('work3').checked,
+                    learn_something: document.getElementById('work4').checked,
+                    
+                    // Personal & health
+                    drink_enough_water: document.getElementById('personal1').checked,
+                    healthy_meals: document.getElementById('personal2').checked,
+                    connect_people: document.getElementById('personal3').checked,
+                    tidy_space: document.getElementById('personal4').checked,
+                    
+                    // Evening routine
+                    reflect_day: document.getElementById('evening1').checked,
+                    prepare_tomorrow: document.getElementById('evening2').checked,
+                    no_screens: document.getElementById('evening3').checked,
+                    sleep_early: document.getElementById('evening4').checked,
+                    
+                    // Notes and progress
+                    daily_notes: document.getElementById('dailyNotes').value,
+                    completed_tasks: document.querySelectorAll('.checkbox:checked').length,
+                    total_tasks: document.querySelectorAll('.checkbox').length,
+                    completion_percentage: Math.round((document.querySelectorAll('.checkbox:checked').length / document.querySelectorAll('.checkbox').length) * 100)
+                };
+
+                // Send to SheetDB
+                const response = await fetch(sheetdbUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showStatus('✅ Daily checklist saved successfully to your Google Sheet!', 'success');
+                    // Optionally clear form after successful save
+                    // clearForm();
+                } else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+            } catch (error) {
+                console.error('Error saving to sheet:', error);
+                showStatus('❌ Error saving to sheet. Please check your SheetDB URL and try again.', 'error');
+            } finally {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        });
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
         }
 
-        // Tab switching
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Show/hide content
-            if (tab === 'editor') {
-                document.getElementById('editorTab').style.display = 'block';
-                document.getElementById('previewTab').style.display = 'none';
-            } else {
-                document.getElementById('editorTab').style.display = 'none';
-                document.getElementById('previewTab').style.display = 'block';
-                updatePreview();
+        function clearForm() {
+            if (confirm('Are you sure you want to clear all checkboxes and notes?')) {
+                document.querySelectorAll('.checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                document.getElementById('dailyNotes').value = '';
+                updateProgress();
+                showStatus('Form cleared successfully!', 'success');
             }
         }
 
-        // Update preview with basic Markdown rendering
-        function updatePreview() {
-            const content = textEditor.value;
-            let html = content
-                // Headers
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                // Bold and italic
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                // Code blocks
-                .replace(/
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98712e7a20a69998',t:'MTc1OTIwODY4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+        // Initialize progress on page load
+        updateProgress();
+
+        // Auto-save to localStorage every 30 seconds
+        setInterval(() => {
+            const formData = {};
+            document.querySelectorAll('.checkbox').forEach(checkbox => {
+                formData[checkbox.id] = checkbox.checked;
+            });
+            formData.notes = document.getElementById('dailyNotes').value;
+            localStorage.setItem('dailyChecklistBackup', JSON.stringify(formData));
+        }, 30000);
+
+        // Load backup on page load
+        window.addEventListener('load', () => {
+            const backup = localStorage.getItem('dailyChecklistBackup');
+            if (backup) {
+                try {
+                    const data = JSON.parse(backup);
+                    Object.keys(data).forEach(key => {
+                        if (key === 'notes') {
+                            document.getElementById('dailyNotes').value = data[key];
+                        } else {
+                            const checkbox = document.getElementById(key);
+                            if (checkbox) checkbox.checked = data[key];
+                        }
+                    });
+                    updateProgress();
+                } catch (error) {
+                    console.error('Error loading backup:', error);
+                }
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9879d3ece7392095',t:'MTc1OTI5OTM1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
