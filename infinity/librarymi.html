@@ -7,26 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js Library for viewing PDF files -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- Firebase Libraries -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, onSnapshot, addDoc, doc, setDoc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Global variables for Firebase access
-        window.initializeApp = initializeApp;
-        window.getAuth = getAuth;
-        window.signInAnonymously = signInAnonymously;
-        window.signInWithCustomToken = signInWithCustomToken;
-        window.getFirestore = getFirestore;
-        window.collection = collection;
-        window.query = query;
-        window.onSnapshot = onSnapshot;
-        window.addDoc = addDoc;
-        window.doc = doc;
-        window.getDocs = getDocs;
-        
-    </script>
+    <!-- Firebase Imports တွေကို main module script ထဲသို့ ရွှေ့လိုက်ပါပြီ။ -->
     <style>
         body {
             box-sizing: border-box;
@@ -232,6 +213,11 @@
     </footer>
 
     <script type="module">
+        // Firebase Libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, addDoc, doc, setDoc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // Firebase Configuration and Initialization
         let db;
         let auth;
@@ -252,20 +238,24 @@
         async function initializeFirebase() {
             try {
                 // Config ယူရန်
+                if (typeof window.__firebase_config === 'undefined' || !window.__firebase_config || window.__firebase_config === 'undefined') {
+                    throw new Error("Firebase Configuration Missing. Please ensure the Web App is registered in the Firebase Console and refresh the page.");
+                }
+
                 const firebaseConfig = JSON.parse(window.__firebase_config);
                 const appId = window.__app_id;
                 const initialAuthToken = window.__initial_auth_token;
 
-                // Firebase App ကို စတင်ရန်
-                const app = window.initializeApp(firebaseConfig);
-                db = window.getFirestore(app);
-                auth = window.getAuth(app);
+                // Firebase App ကို စတင်ရန် (တိုက်ရိုက် imported function ကို အသုံးပြု)
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-                // Authentication ဝင်ရန် (Canvas Token သို့မဟုတ် Anonymous)
+                // Authentication ဝင်ရန် (တိုက်ရိုက် imported function များကို အသုံးပြု)
                 if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-                    await window.signInWithCustomToken(auth, initialAuthToken);
+                    await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await window.signInAnonymously(auth);
+                    await signInAnonymously(auth);
                 }
 
                 // User ID ရယူရန်
@@ -277,19 +267,24 @@
 
             } catch (error) {
                 console.error('Firebase initialization failed:', error);
-                document.getElementById('loadingIndicator').textContent = 
-                    '⚠️ Firebase ကို ချိတ်ဆက်၍မရပါ။ Console error ကို စစ်ဆေးပါ။ (Project ID/Config မမှန်ကန်ခြင်း သို့မဟုတ် Network ပြဿနာ)';
+                
+                let userMessage = '⚠️ Firebase ကို ချိတ်ဆက်၍မရပါ။ Console error ကို စစ်ဆေးပါ။';
+                if (error.message.includes("Firebase Configuration Missing")) {
+                     userMessage = '🛑 Firebase Configuration မတွေ့ပါ။ **Web App** ကို Firebase Project မှာ မှတ်ပုံတင်ပြီး စာမျက်နှာကို ပြန်တင်ပေးပါ။';
+                }
+
+                document.getElementById('loadingIndicator').textContent = userMessage;
             }
         }
 
         // Firestore Real-time Listener Setup
         function setupRealtimeListener(appId) {
             const collectionPath = `artifacts/${appId}/public/data/books`;
-            const booksCollection = window.collection(db, collectionPath);
-            const q = window.query(booksCollection);
+            const booksCollection = collection(db, collectionPath); // တိုက်ရိုက် imported function ကို အသုံးပြု
+            const q = query(booksCollection); // တိုက်ရိုက် imported function ကို အသုံးပြု
 
-            // onSnapshot: ဒေတာပြောင်းလဲမှုတိုင်းကို အလိုအလျောက် နားထောင်ခြင်း
-            window.onSnapshot(q, (snapshot) => {
+            // onSnapshot: ဒေတာပြောင်းလဲမှုတိုင်းကို အလိုအလျောက် နားထောင်ခြင်း (တိုက်ရိုက် imported function ကို အသုံးပြု)
+            onSnapshot(q, (snapshot) => {
                 currentBooks = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -383,8 +378,6 @@
                 document.getElementById('pdfModal').classList.add('hidden');
             });
 
-            // PDF Viewer Controls (Needs to be set up dynamically in loadPDF)
-            
             // Add Book Form Submission
             document.getElementById('addBookForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -409,7 +402,7 @@
                     const appId = window.__app_id;
                     const collectionPath = `artifacts/${appId}/public/data/books`;
                     
-                    await window.addDoc(window.collection(db, collectionPath), newBook);
+                    await addDoc(collection(db, collectionPath), newBook); // တိုက်ရိုက် imported function ကို အသုံးပြု
 
                     messageElement.textContent = '✅ စာအုပ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။';
                     messageElement.classList.remove('text-red-500');
