@@ -1,16 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="my">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Library (Real-time)</title>
+    <title>ဒစ်ဂျစ်တယ် စာကြည့်တိုက်</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js Library for viewing PDF files -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Firebase Libraries -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, addDoc, doc, setDoc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Global variables for Firebase access
+        window.initializeApp = initializeApp;
+        window.getAuth = getAuth;
+        window.signInAnonymously = signInAnonymously;
+        window.signInWithCustomToken = signInWithCustomToken;
+        window.getFirestore = getFirestore;
+        window.collection = collection;
+        window.query = query;
+        window.onSnapshot = onSnapshot;
+        window.addDoc = addDoc;
+        window.doc = doc;
+        window.getDocs = getDocs;
+        
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
-            font-family: 'Inter', sans-serif;
             box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
         .book-spine {
             writing-mode: vertical-rl;
@@ -18,14 +38,6 @@
         }
         .book-hover {
             transition: all 0.3s ease;
-            transform-style: preserve-3d;
-        }
-        .book-cover {
-            transform: rotateY(0deg);
-            transition: transform 0.5s;
-        }
-        .book-hover:hover .book-cover {
-            transform: rotateY(-5deg);
         }
         .book-hover:hover {
             transform: translateY(-5px);
@@ -35,238 +47,199 @@
             transition: all 0.3s ease;
         }
         .category-tab.active {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
         }
         .pdf-viewer {
             background: #f8f9fa;
             border: 2px dashed #dee2e6;
         }
+        .custom-modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-amber-50 to-orange-100 min-h-screen">
     <!-- Header -->
-    <header class="bg-gradient-to-r from-amber-800 to-orange-700 text-white p-6 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center flex-wrap">
+    <header class="bg-gradient-to-r from-amber-800 to-orange-700 text-white p-6 shadow-lg sticky top-0 z-10">
+        <div class="container mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-4xl font-extrabold mb-1">📚 Digital Library</h1>
-                <p class="text-amber-100">Free access to books, PDFs, and learning materials (Real-time Data)</p>
+                <h1 class="text-3xl md:text-4xl font-bold mb-1">📚 ဒစ်ဂျစ်တယ် စာကြည့်တိုက်</h1>
+                <p class="text-amber-100 text-sm md:text-base">အခမဲ့ စာအုပ်များ၊ PDF များနှင့် သင်ယူမှုဆိုင်ရာပစ္စည်းများ</p>
             </div>
-            <div class="mt-2 md:mt-0 text-right">
-                <p class="text-sm text-amber-200">User ID: <span id="userIdDisplay" class="font-mono text-xs">Loading...</span></p>
-                <button id="addNewBookBtn" class="mt-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors">
-                    + Add New Book
-                </button>
-            </div>
+            <button id="showAddModalBtn" class="bg-white text-orange-700 hover:bg-orange-100 px-4 py-2 rounded-lg font-semibold shadow-md transition-colors text-sm md:text-base">
+                ➕ စာအုပ်အသစ်ထည့်ရန်
+            </button>
         </div>
     </header>
 
-    <div class="container mx-auto p-6">
-        <!-- Status Message Box -->
-        <div id="statusMessage" class="hidden fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-xl z-[100]"></div>
-
+    <div class="container mx-auto p-4 md:p-6">
         <!-- Category Tabs -->
-        <div class="mb-8">
-            <div class="flex flex-wrap gap-3 mb-6">
-                <button class="category-tab active px-6 py-3 rounded-lg font-semibold bg-white shadow-md" data-category="all">
-                    📖 All Books
+        <div class="mb-8 overflow-x-auto">
+            <div class="flex flex-nowrap gap-2 pb-2">
+                <button class="category-tab active px-4 md:px-6 py-2 rounded-lg font-semibold bg-white shadow-md flex-shrink-0" data-category="all">
+                    📖 စာအုပ်အားလုံး
                 </button>
-                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="programming">
-                    💻 Programming
+                <button class="category-tab px-4 md:px-6 py-2 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50 flex-shrink-0" data-category="programming">
+                    💻 ပရိုဂရမ်မင်း
                 </button>
-                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="science">
-                    🔬 Science
+                <button class="category-tab px-4 md:px-6 py-2 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50 flex-shrink-0" data-category="science">
+                    🔬 သိပ္ပံ
                 </button>
-                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="literature">
-                    📝 Literature
+                <button class="category-tab px-4 md:px-6 py-2 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50 flex-shrink-0" data-category="literature">
+                    📝 စာပေ
                 </button>
-                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="automation">
-                    🤖 Automation Testing
+                <button class="category-tab px-4 md:px-6 py-2 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50 flex-shrink-0" data-category="business">
+                    💼 စီးပွားရေး
                 </button>
-                <!-- Other categories are dynamically included -->
+                <button class="category-tab px-4 md:px-6 py-2 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50 flex-shrink-0" data-category="automation">
+                    🤖 အော်တိုမေးရှင်း
+                </button>
             </div>
         </div>
 
         <!-- Bookshelf -->
-        <div class="bg-gradient-to-b from-amber-900 to-amber-800 p-8 rounded-xl shadow-2xl mb-8">
-            <p id="loadingIndicator" class="text-white text-center text-xl p-8">Loading books from database...</p>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4" id="bookshelf">
+        <div class="bg-gradient-to-b from-amber-900 to-amber-800 p-6 md:p-8 rounded-xl shadow-2xl mb-8">
+            <div id="loadingIndicator" class="text-white text-center p-8 text-lg font-medium">
+                စာအုပ်စင်ကို တင်နေသည်...
+            </div>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4" id="bookshelf">
                 <!-- Books will be populated by JavaScript (Firestore) -->
             </div>
         </div>
+    </div>
 
-        <!-- Add New Book Modal -->
-        <div id="addBookModal" class="fixed inset-0 bg-black bg-opacity-70 hidden z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-                <form id="addBookForm" class="p-6">
-                    <div class="flex justify-between items-center mb-6 border-b pb-3">
-                        <h2 class="text-2xl font-bold text-gray-800">Add New Free Book (to Firestore)</h2>
-                        <button type="button" id="closeAddBookModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+    <!-- 1. Add New Book Modal -->
+    <div id="addBookModal" class="fixed inset-0 custom-modal-backdrop hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full shadow-2xl">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">စာအုပ်အသစ်ထည့်ရန်</h2>
+                    <button id="closeAddModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <form id="addBookForm" class="space-y-4">
+                    <div>
+                        <label for="bookTitle" class="block text-sm font-medium text-gray-700">စာအုပ်ခေါင်းစဉ်</label>
+                        <input type="text" id="bookTitle" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
                     </div>
-                    <div class="space-y-4">
-                        <input name="title" type="text" placeholder="Title" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <input name="author" type="text" placeholder="Author" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <input name="pages" type="number" placeholder="Pages" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <input name="year" type="number" placeholder="Year (e.g., 2024)" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <select name="category" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                            <option value="" disabled selected>Select Category</option>
-                            <option value="programming">Programming</option>
-                            <option value="science">Science</option>
-                            <option value="literature">Literature</option>
-                            <option value="business">Business</option>
-                            <option value="automation">Automation Testing</option>
+                    <div>
+                        <label for="bookAuthor" class="block text-sm font-medium text-gray-700">စာရေးသူအမည်</label>
+                        <input type="text" id="bookAuthor" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <div>
+                        <label for="bookCategory" class="block text-sm font-medium text-gray-700">အမျိုးအစား</label>
+                        <select id="bookCategory" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option value="programming">ပရိုဂရမ်မင်း</option>
+                            <option value="science">သိပ္ပံ</option>
+                            <option value="literature">စာပေ</option>
+                            <option value="business">စီးပွားရေး</option>
+                            <option value="automation">အော်တိုမေးရှင်း စမ်းသပ်ခြင်း</option>
+                            <option value="other">အခြား</option>
                         </select>
-                        <input name="color" type="text" placeholder="Tailwind Color Class (e.g., from-red-500 to-red-700)" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <textarea name="description" placeholder="Description" rows="3" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
-                        <input name="pdfUrl" type="url" placeholder="Direct PDF URL (e.g., https://example.com/file.pdf)" required class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     </div>
-                    <button type="submit" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors">
-                        Save Book
+                    <div>
+                        <label for="bookPdfUrl" class="block text-sm font-medium text-gray-700">PDF လင့်ခ် (URL)</label>
+                        <input type="url" id="bookPdfUrl" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="https://example.com/freebook.pdf">
+                    </div>
+                    <div>
+                        <label for="bookDescription" class="block text-sm font-medium text-gray-700">ဖော်ပြချက် (Description)</label>
+                        <textarea id="bookDescription" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors">
+                        ✅ စာအုပ်သိမ်းဆည်းရန်
                     </button>
+                    <p id="addBookMessage" class="text-sm text-center text-red-500"></p>
                 </form>
             </div>
         </div>
+    </div>
 
-        <!-- Book Details Modal (Unchanged) -->
-        <div id="bookModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <h2 id="modalTitle" class="text-2xl font-bold text-gray-800"></h2>
-                        <button id="closeModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+
+    <!-- 2. Book Details Modal (Same as before) -->
+    <div id="bookModal" class="fixed inset-0 custom-modal-backdrop hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 id="modalTitle" class="text-2xl font-bold text-gray-800"></h2>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <div id="modalCover" class="w-full h-64 bg-gradient-to-br rounded-lg mb-4"></div>
+                        <div class="space-y-2 text-sm">
+                            <p><strong>စာရေးသူ:</strong> <span id="modalAuthor"></span></p>
+                            <p><strong>အမျိုးအစား:</strong> <span id="modalCategory"></span></p>
+                            <p><strong>စာမျက်နှာ:</strong> <span id="modalPages"></span></p>
+                            <p><strong>ထုတ်ဝေနှစ်:</strong> <span id="modalYear"></span></p>
+                        </div>
                     </div>
                     
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <div id="modalCover" class="w-full h-64 bg-gradient-to-br rounded-lg mb-4"></div>
-                            <div class="space-y-2">
-                                <p><strong>Author:</strong> <span id="modalAuthor"></span></p>
-                                <p><strong>Category:</strong> <span id="modalCategory"></span></p>
-                                <p><strong>Pages:</strong> <span id="modalPages"></span></p>
-                                <p><strong>Year:</strong> <span id="modalYear"></span></p>
-                            </div>
-                        </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">ဖော်ပြချက်</h3>
+                        <p id="modalDescription" class="text-gray-600 mb-4 text-sm"></p>
                         
-                        <div>
-                            <h3 class="text-lg font-semibold mb-3">Description</h3>
-                            <p id="modalDescription" class="text-gray-600 mb-4"></p>
-                            
-                            <div class="space-y-3">
-                                <button id="viewPdfBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
-                                    📄 View PDF
-                                </button>
-                                <!-- These buttons are for future functionality and currently show mock modals -->
-                                <button id="viewSlidesBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
-                                    🎯 View Slides
-                                </button>
-                                <button id="takeTestBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
-                                    ✅ Take QA Test
-                                </button>
-                            </div>
+                        <div class="space-y-3">
+                            <button id="viewPdfBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
+                                📄 PDF ကြည့်ရန်
+                            </button>
+                            <button id="viewSlidesBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors" disabled>
+                                🎯 ဆလိုက်များ ကြည့်ရန် (မရနိုင်သေးပါ)
+                            </button>
+                            <button id="takeTestBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors" disabled>
+                                ✅ စစ်ဆေးမှု ဖြေဆိုရန် (မရနိုင်သေးပါ)
+                            </button>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PDF Viewer Modal (Unchanged) -->
-        <div id="pdfModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="text-lg font-semibold" id="pdfTitle">PDF Viewer</h3>
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2">
-                            <button id="prevPage" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm">← Prev</button>
-                            <span id="pageInfo" class="text-sm">Page 1 of 1</span>
-                            <button id="nextPage" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm">Next →</button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button id="zoomOut" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded text-sm">-</button>
-                            <span id="zoomLevel" class="text-sm">100%</span>
-                            <button id="zoomIn" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded text-sm">+</button>
-                        </div>
-                        <button id="closePdfModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-                    </div>
-                </div>
-                <div class="pdf-viewer overflow-auto" style="height: calc(90vh - 80px);">
-                    <div id="pdfContainer" class="flex justify-center p-4">
-                        <canvas id="pdfCanvas" class="border shadow-lg"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Slides Viewer Modal (Mock, Unchanged) -->
-        <div id="slidesModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h3 class="text-lg font-semibold">Presentation Slides</h3>
-                    <button id="closeSlidesModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-                </div>
-                <div class="pdf-viewer h-96 flex items-center justify-center">
-                    <div class="text-center">
-                        <div class="text-6xl mb-4">🎯</div>
-                        <p class="text-gray-600 mb-4">Interactive slides would be displayed here</p>
-                        <div class="flex gap-2 justify-center">
-                            <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">← Previous</button>
-                            <span class="px-4 py-2">Slide 1 of 15</span>
-                            <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">Next →</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- QA Test Modal (Mock, Unchanged) -->
-        <div id="testModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-bold">QA Test</h3>
-                        <button id="closeTestModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-                    </div>
-                    
-                    <div id="testContent" class="text-center">
-                        <div class="text-6xl mb-4">✅</div>
-                        <p class="text-gray-600 mb-4">Test questions based on the book would be generated here.</p>
-                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">Start Test</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- 3. PDF Viewer Modal (Same as before) -->
+    <div id="pdfModal" class="fixed inset-0 custom-modal-backdrop hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-semibold" id="pdfTitle">PDF ကြည့်ရှုသူ</h3>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <button id="prevPage" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm">← ယခင်</button>
+                        <span id="pageInfo" class="text-sm">စာမျက်နှာ ၁/၁</span>
+                        <button id="nextPage" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm">နောက် →</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="zoomOut" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded text-sm">-</button>
+                        <span id="zoomLevel" class="text-sm">၁၀၀%</span>
+                        <button id="zoomIn" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded text-sm">+</button>
+                    </div>
+                    <button id="closePdfModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+            </div>
+            <div class="pdf-viewer overflow-auto" style="height: calc(90vh - 80px);">
+                <div id="pdfContainer" class="flex justify-center p-4">
+                    <canvas id="pdfCanvas" class="border shadow-lg"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Footer -->
     <footer class="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-6 mt-12">
         <div class="container mx-auto text-center">
-            <div class="flex items-center justify-center gap-2 mb-2">
-                <span class="text-2xl">💡</span>
-                <span class="text-lg font-semibold">Idea by KMT</span>
-            </div>
-            <p class="text-gray-300 text-sm">Data powered by Firestore for real-time collaboration.</p>
+            <p class="text-gray-300 text-sm">💡 ဒီဇိုင်းနှင့် စိတ်ကူး - KMT | Powered by Canvas AI</p>
         </div>
     </footer>
 
-    <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // --- Global Firebase & App Variables ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-digital-library';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        // Firebase Configuration and Initialization
         let db;
         let auth;
-        let globalUserId = null;
-        let allBooks = []; // This will store the real-time book data
-
-        // --- PDF.js State Variables (from original code) ---
+        let userId = 'loading'; // Default loading state
+        let currentBooks = [];
         let currentCategory = 'all';
-        let currentBook = null;
+
+        // PDF Viewer State
         let pdfDoc = null;
         let pageNum = 1;
         let pageRendering = false;
@@ -275,177 +248,116 @@
         let canvas = null;
         let ctx = null;
 
-        // PDF.js setup
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-        // --- Utility Functions ---
-
-        function showMessage(message, isError = false) {
-            const statusBox = document.getElementById('statusMessage');
-            statusBox.textContent = message;
-            statusBox.className = `fixed top-4 right-4 text-white p-4 rounded-lg shadow-xl z-[100] ${isError ? 'bg-red-500' : 'bg-green-500'}`;
-            statusBox.classList.remove('hidden');
-            setTimeout(() => {
-                statusBox.classList.add('hidden');
-            }, 3000);
-        }
-
-        function getBooksCollectionRef(userId) {
-            // Public path for shared book data
-            return collection(db, 'artifacts', appId, 'public', 'data', 'books');
-        }
-
-        // --- Core Application Logic ---
-
-        /**
-         * 1. Initialize Firebase, Auth, and Firestore.
-         */
+        // Firebase Initialization and Auth Logic
         async function initializeFirebase() {
             try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                // setLogLevel('debug'); // Uncomment to see Firebase logs in console
-                
-                // Sign in using the provided custom token or anonymously
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
+                // Config ယူရန်
+                const firebaseConfig = JSON.parse(window.__firebase_config);
+                const appId = window.__app_id;
+                const initialAuthToken = window.__initial_auth_token;
+
+                // Firebase App ကို စတင်ရန်
+                const app = window.initializeApp(firebaseConfig);
+                db = window.getFirestore(app);
+                auth = window.getAuth(app);
+
+                // Authentication ဝင်ရန် (Canvas Token သို့မဟုတ် Anonymous)
+                if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+                    await window.signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await signInAnonymously(auth);
+                    await window.signInAnonymously(auth);
                 }
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        globalUserId = user.uid;
-                        document.getElementById('userIdDisplay').textContent = globalUserId;
-                        loadBooks(); // Start loading data once authenticated
-                    } else {
-                        globalUserId = crypto.randomUUID(); // Fallback for unauthenticated state
-                        document.getElementById('userIdDisplay').textContent = 'ANON: ' + globalUserId.substring(0, 8) + '...';
-                        showMessage("Signed in anonymously. Data is public.", false);
-                    }
-                });
+                // User ID ရယူရန်
+                userId = auth.currentUser?.uid || 'anonymous-user';
+                console.log(`Authenticated with ID: ${userId}`);
+
+                // Firestore မှ ဒေတာ အချိန်နှင့်တပြေးညီ ဆွဲယူရန်
+                setupRealtimeListener(appId);
+
             } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                showMessage("Database connection failed. Check console for details.", true);
+                console.error('Firebase initialization failed:', error);
+                document.getElementById('loadingIndicator').textContent = 
+                    '⚠️ Firebase ကို ချိတ်ဆက်၍မရပါ။ Console error ကို စစ်ဆေးပါ။ (Project ID/Config မမှန်ကန်ခြင်း သို့မဟုတ် Network ပြဿနာ)';
             }
         }
 
-        /**
-         * 2. Load and listen for book data in real-time using onSnapshot.
-         */
-        function loadBooks() {
-            if (!db) return;
-            const q = query(getBooksCollectionRef(globalUserId));
+        // Firestore Real-time Listener Setup
+        function setupRealtimeListener(appId) {
+            const collectionPath = `artifacts/${appId}/public/data/books`;
+            const booksCollection = window.collection(db, collectionPath);
+            const q = window.query(booksCollection);
 
-            onSnapshot(q, (snapshot) => {
-                const newBooks = [];
-                snapshot.forEach((doc) => {
-                    newBooks.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // Sort books (Since orderBy is often problematic without indexes, we sort client-side)
-                allBooks = newBooks.sort((a, b) => a.title.localeCompare(b.title));
-
-                document.getElementById('loadingIndicator').classList.add('hidden');
+            // onSnapshot: ဒေတာပြောင်းလဲမှုတိုင်းကို အလိုအလျောက် နားထောင်ခြင်း
+            window.onSnapshot(q, (snapshot) => {
+                currentBooks = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log(`Fetched ${currentBooks.length} books from Firestore.`);
                 renderBooks();
-                showMessage(`Found ${allBooks.length} books.`, false);
             }, (error) => {
-                console.error("Error fetching documents:", error);
-                document.getElementById('loadingIndicator').textContent = 'Error loading books. Check console.';
+                console.error("Error reading documents: ", error);
+                document.getElementById('loadingIndicator').textContent = 
+                    '🛑 ဒေတာဖတ်ရာတွင် အမှားဖြစ်ပွားသည်။ Security Rules (allow read: if true;) မှန်ကန်ကြောင်း စစ်ဆေးပါ။';
             });
         }
 
-        /**
-         * 3. Add New Book Functionality
-         */
-        async function addNewBook(bookData) {
-            if (!db || !globalUserId) {
-                showMessage("Authentication error. Cannot save book.", true);
-                return;
-            }
-            try {
-                const docRef = await addDoc(getBooksCollectionRef(globalUserId), bookData);
-                showMessage(`Book "${bookData.title}" added successfully!`, false);
-                document.getElementById('addBookModal').classList.add('hidden');
-                document.getElementById('addBookForm').reset();
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                showMessage("Failed to save book: " + e.message, true);
-            }
+        // Generate a random color gradient for the book spine
+        function getRandomColor() {
+            const colors = [
+                "from-blue-500 to-blue-700", "from-green-500 to-green-700", "from-purple-500 to-purple-700",
+                "from-red-500 to-red-700", "from-yellow-500 to-yellow-700", "from-teal-500 to-teal-700",
+                "from-indigo-500 to-indigo-700", "from-rose-500 to-rose-700", "from-cyan-500 to-cyan-700"
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
 
-        // --- UI Rendering Functions ---
-
+        // Render books based on current category
         function renderBooks() {
             const bookshelf = document.getElementById('bookshelf');
-            
-            // Filter books based on current category
-            const filteredBooks = currentCategory === 'all' 
-                ? allBooks 
-                : allBooks.filter(book => book.category === currentCategory);
+            const loadingIndicator = document.getElementById('loadingIndicator');
 
-            if (filteredBooks.length === 0 && allBooks.length > 0) {
-                 bookshelf.innerHTML = `<p class="text-white text-center text-xl col-span-full p-8">No books found in the category: ${currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1)}</p>`;
-                 return;
-            } else if (allBooks.length === 0) {
-                 bookshelf.innerHTML = `<p class="text-white text-center text-xl col-span-full p-8">No books uploaded yet. Use '+ Add New Book' button to start!</p>`;
-                 return;
-            }
+            // Filter books based on category
+            const filteredBooks = currentCategory === 'all'
+                ? currentBooks
+                : currentBooks.filter(book => book.category === currentCategory);
 
+            // Hide loading indicator once data is received
+            loadingIndicator.classList.add('hidden');
+            bookshelf.innerHTML = '';
 
-            bookshelf.innerHTML = filteredBooks.map(book => `
-                <div class="book-hover cursor-pointer" onclick="window.openBookModal('${book.id}')">
-                    <div class="book-cover bg-gradient-to-b ${book.color} h-48 w-12 rounded-t-sm rounded-b-md shadow-lg relative group transform">
-                        <div class="book-spine h-full flex items-center justify-center p-2">
-                            <span class="text-white text-xs font-bold text-center leading-tight">
-                                ${book.title}
-                            </span>
-                        </div>
-                        <div class="absolute -top-1 left-0 right-0 h-2 bg-gradient-to-r ${book.color} rounded-t-sm opacity-80"></div>
+            if (filteredBooks.length === 0 && currentBooks.length > 0) {
+                 bookshelf.innerHTML = `
+                    <div class="col-span-full text-center text-white p-10 bg-black bg-opacity-30 rounded-lg shadow-inner mt-4">
+                        <div class="text-4xl mb-3">🔍</div>
+                        <p class="font-medium">ဒီအမျိုးအစားမှာ စာအုပ်မရှိသေးပါ။</p>
                     </div>
-                </div>
-            `).join('');
-        }
-
-        function openBookModal(bookId) {
-            // Find book by Firestore document ID (which is stored as 'id')
-            currentBook = allBooks.find(book => book.id === bookId);
-            if (!currentBook) return;
-
-            document.getElementById('modalTitle').textContent = currentBook.title;
-            document.getElementById('modalAuthor').textContent = currentBook.author;
-            document.getElementById('modalCategory').textContent = currentBook.category.charAt(0).toUpperCase() + currentBook.category.slice(1);
-            document.getElementById('modalPages').textContent = currentBook.pages || 'N/A';
-            document.getElementById('modalYear').textContent = currentBook.year || 'N/A';
-            document.getElementById('modalDescription').textContent = currentBook.description;
-            
-            const modalCover = document.getElementById('modalCover');
-            modalCover.className = `w-full h-64 bg-gradient-to-br ${currentBook.color || 'from-gray-300 to-gray-500'} rounded-lg mb-4 flex items-center justify-center`;
-            modalCover.innerHTML = `<span class="text-white text-xl font-bold text-center p-4">${currentBook.title}</span>`;
-
-            // Enable/Disable PDF button based on URL existence
-            const viewPdfBtn = document.getElementById('viewPdfBtn');
-            if (currentBook.pdfUrl) {
-                viewPdfBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                viewPdfBtn.disabled = false;
-                viewPdfBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                 `;
+            } else if (currentBooks.length === 0) {
+                 bookshelf.innerHTML = `
+                    <div class="col-span-full text-center text-white p-10 bg-black bg-opacity-30 rounded-lg shadow-inner mt-4">
+                        <div class="text-4xl mb-3">📚</div>
+                        <p class="font-medium">စာအုပ်မတွေ့ပါ။ 'စာအုပ်အသစ်ထည့်ရန်' ကိုနှိပ်ပြီး စတင်ထည့်သွင်းပါ။</p>
+                    </div>
+                 `;
             } else {
-                viewPdfBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                viewPdfBtn.disabled = true;
-                viewPdfBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                viewPdfBtn.textContent = '📄 PDF Unavailable';
+                bookshelf.innerHTML = filteredBooks.map(book => `
+                    <div class="book-hover cursor-pointer" onclick="openBookModal('${book.id}')">
+                        <div class="bg-gradient-to-b ${book.color || getRandomColor()} h-48 w-12 rounded-t-sm rounded-b-md shadow-lg relative group">
+                            <div class="book-spine h-full flex items-center justify-center p-2">
+                                <span class="text-white text-xs font-bold text-center leading-tight">
+                                    ${book.title}
+                                </span>
+                            </div>
+                            <div class="absolute -top-1 left-0 right-0 h-2 bg-gradient-to-r ${book.color || getRandomColor()} rounded-t-sm opacity-80"></div>
+                        </div>
+                    </div>
+                `).join('');
             }
-
-            document.getElementById('bookModal').classList.remove('hidden');
         }
 
-        // Expose function globally for HTML onclick (due to single file nature)
-        window.openBookModal = openBookModal;
-
-
-        // --- Event Listeners and PDF Functions (Modified from original code) ---
-
+        // --- Modal and Event Listeners ---
         function setupEventListeners() {
             // Category tabs
             document.querySelectorAll('.category-tab').forEach(tab => {
@@ -457,78 +369,102 @@
                 });
             });
 
-            // Modal close buttons
+            // Modal Toggles
+            document.getElementById('showAddModalBtn').addEventListener('click', () => {
+                document.getElementById('addBookModal').classList.remove('hidden');
+            });
+            document.getElementById('closeAddModal').addEventListener('click', () => {
+                document.getElementById('addBookModal').classList.add('hidden');
+            });
             document.getElementById('closeModal').addEventListener('click', () => {
                 document.getElementById('bookModal').classList.add('hidden');
             });
-
             document.getElementById('closePdfModal').addEventListener('click', () => {
                 document.getElementById('pdfModal').classList.add('hidden');
-                pdfDoc = null; // Clear PDF doc reference
-                pageNum = 1; // Reset page
-                scale = 1.0; // Reset zoom
             });
 
-            document.getElementById('closeSlidesModal').addEventListener('click', () => {
-                document.getElementById('slidesModal').classList.add('hidden');
-            });
-
-            document.getElementById('closeTestModal').addEventListener('click', () => {
-                document.getElementById('testModal').classList.add('hidden');
-            });
-
-            // Add New Book Modal controls
-            document.getElementById('addNewBookBtn').addEventListener('click', () => {
-                document.getElementById('addBookModal').classList.remove('hidden');
-            });
-            document.getElementById('closeAddBookModal').addEventListener('click', () => {
-                document.getElementById('addBookModal').classList.add('hidden');
-                document.getElementById('addBookForm').reset();
-            });
-
-            // Handle Add Book Form submission
-            document.getElementById('addBookForm').addEventListener('submit', (e) => {
+            // PDF Viewer Controls (Needs to be set up dynamically in loadPDF)
+            
+            // Add Book Form Submission
+            document.getElementById('addBookForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const formData = new FormData(e.target);
-                const bookData = {};
-                formData.forEach((value, key) => {
-                    // Convert pages and year to numbers
-                    if (key === 'pages' || key === 'year') {
-                        bookData[key] = parseInt(value);
-                    } else {
-                        bookData[key] = value;
-                    }
-                });
-                addNewBook(bookData);
-            });
+                const form = e.target;
+                const messageElement = document.getElementById('addBookMessage');
+                
+                const newBook = {
+                    title: form.bookTitle.value,
+                    author: form.bookAuthor.value,
+                    category: form.bookCategory.value,
+                    pdfUrl: form.bookPdfUrl.value,
+                    description: form.bookDescription.value,
+                    // Default values for display
+                    pages: Math.floor(Math.random() * 500) + 100, // Random pages
+                    year: new Date().getFullYear(),
+                    color: getRandomColor(),
+                    addedBy: userId,
+                    createdAt: new Date().toISOString()
+                };
 
-            // Action buttons
-            document.getElementById('viewPdfBtn').addEventListener('click', () => {
-                if (currentBook && currentBook.pdfUrl) {
+                try {
+                    const appId = window.__app_id;
+                    const collectionPath = `artifacts/${appId}/public/data/books`;
+                    
+                    await window.addDoc(window.collection(db, collectionPath), newBook);
+
+                    messageElement.textContent = '✅ စာအုပ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။';
+                    messageElement.classList.remove('text-red-500');
+                    messageElement.classList.add('text-green-600');
+                    form.reset();
+                    
+                    // Close modal after a short delay
+                    setTimeout(() => {
+                        document.getElementById('addBookModal').classList.add('hidden');
+                    }, 1500);
+
+                } catch (error) {
+                    console.error("Error adding document: ", error);
+                    messageElement.textContent = `🛑 စာအုပ်ထည့်ရာတွင် အမှားဖြစ်ပွားသည်: ${error.message}.`;
+                    messageElement.classList.remove('text-green-600');
+                    messageElement.classList.add('text-red-500');
+                }
+            });
+        }
+
+        // Open book details modal
+        window.openBookModal = function(bookId) {
+            const currentBook = currentBooks.find(book => book.id === bookId);
+            if (!currentBook) return;
+
+            document.getElementById('modalTitle').textContent = currentBook.title;
+            document.getElementById('modalAuthor').textContent = currentBook.author;
+            document.getElementById('modalCategory').textContent = currentBook.category.charAt(0).toUpperCase() + currentBook.category.slice(1);
+            document.getElementById('modalPages').textContent = currentBook.pages || 'N/A';
+            document.getElementById('modalYear').textContent = currentBook.year || 'N/A';
+            document.getElementById('modalDescription').textContent = currentBook.description;
+            
+            const modalCover = document.getElementById('modalCover');
+            modalCover.className = `w-full h-64 bg-gradient-to-br ${currentBook.color || getRandomColor()} rounded-lg mb-4 flex items-center justify-center`;
+            modalCover.innerHTML = `<span class="text-white text-xl font-bold text-center p-4">${currentBook.title}</span>`;
+
+            // Setup PDF button
+            const viewPdfBtn = document.getElementById('viewPdfBtn');
+            viewPdfBtn.onclick = () => {
+                if (currentBook.pdfUrl) {
                     loadPDF(currentBook.pdfUrl, currentBook.title);
                     document.getElementById('bookModal').classList.add('hidden');
                     document.getElementById('pdfModal').classList.remove('hidden');
                 } else {
-                    showMessage('PDF not available for this book, or link is broken.', true);
+                    // Use custom UI message instead of alert
+                    document.getElementById('modalDescription').textContent = "⚠️ PDF လင့်ခ် မရှိသေးပါ - စာအုပ်ထည့်သွင်းစဉ် URL ထည့်သွင်းရန် လိုအပ်ပါသည်။";
                 }
-            });
-
-            document.getElementById('viewSlidesBtn').addEventListener('click', () => {
-                document.getElementById('slidesModal').classList.remove('hidden');
-            });
-
-            document.getElementById('takeTestBtn').addEventListener('click', () => {
-                document.getElementById('testModal').classList.remove('hidden');
-            });
-
-            // PDF Control Buttons
-            document.getElementById('prevPage').onclick = onPrevPage;
-            document.getElementById('nextPage').onclick = onNextPage;
-            document.getElementById('zoomIn').onclick = onZoomIn;
-            document.getElementById('zoomOut').onclick = onZoomOut;
+            };
+            
+            document.getElementById('bookModal').classList.remove('hidden');
         }
 
-        // PDF rendering functions (Unchanged, relies on global PDF variables)
+        // --- PDF Viewer Functions ---
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         function renderPage(num) {
             pageRendering = true;
             pdfDoc.getPage(num).then(function(page) {
@@ -548,10 +484,13 @@
                         renderPage(pageNumPending);
                         pageNumPending = null;
                     }
+                    // Adjust container scroll to center the canvas
+                    const viewer = document.querySelector('.pdf-viewer');
+                    viewer.scrollTop = 0; 
                 });
             });
 
-            document.getElementById('pageInfo').textContent = `Page ${num} of ${pdfDoc.numPages}`;
+            document.getElementById('pageInfo').textContent = `စာမျက်နှာ ${num} / ${pdfDoc.numPages}`;
         }
 
         function queueRenderPage(num) {
@@ -563,17 +502,13 @@
         }
 
         function onPrevPage() {
-            if (pageNum <= 1) {
-                return;
-            }
+            if (pageNum <= 1) return;
             pageNum--;
             queueRenderPage(pageNum);
         }
 
         function onNextPage() {
-            if (pdfDoc && pageNum >= pdfDoc.numPages) {
-                return;
-            }
+            if (pageNum >= pdfDoc.numPages) return;
             pageNum++;
             queueRenderPage(pageNum);
         }
@@ -592,35 +527,41 @@
         }
 
         function loadPDF(url, title) {
-            document.getElementById('pdfTitle').textContent = title + ' - PDF Viewer';
+            document.getElementById('pdfTitle').textContent = title + ' - PDF ကြည့်ရှုသူ';
+            document.getElementById('pdfContainer').innerHTML = '<canvas id="pdfCanvas" class="border shadow-lg"></canvas>';
             
             pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
                 pdfDoc = pdfDoc_;
                 pageNum = 1;
                 scale = 1.0;
-                document.getElementById('zoomLevel').textContent = '100%';
+                document.getElementById('zoomLevel').textContent = '၁၀၀%';
                 
                 canvas = document.getElementById('pdfCanvas');
                 ctx = canvas.getContext('2d');
                 
                 renderPage(pageNum);
                 
+                // Attach dynamic PDF controls
+                document.getElementById('prevPage').onclick = onPrevPage;
+                document.getElementById('nextPage').onclick = onNextPage;
+                document.getElementById('zoomIn').onclick = onZoomIn;
+                document.getElementById('zoomOut').onclick = onZoomOut;
+
             }).catch(function(error) {
                 console.error('Error loading PDF:', error);
-                document.getElementById('pdfModal').classList.add('hidden'); // Close viewer if fail
-                showMessage('Error loading PDF: ' + error.message, true);
+                document.getElementById('pdfContainer').innerHTML = `
+                    <div class="text-center p-8">
+                        <div class="text-6xl mb-4 text-red-500">❌</div>
+                        <p class="text-gray-600 mb-4 font-semibold">PDF ဖိုင်ကို တင်၍မရပါ</p>
+                        <p class="text-sm text-gray-500">PDF URL လင့်ခ် မှန်ကန်ကြောင်း စစ်ဆေးပေးပါ။ (တိုက်ရိုက် PDF လင့်ခ်ဖြစ်ရပါမည်။)</p>
+                    </div>
+                `;
             });
         }
-
-        // --- Initialization ---
-        function initLibrary() {
-            setupEventListeners();
-            initializeFirebase();
-        }
-
+        
         // Initialize the library when page loads
-        window.onload = initLibrary;
-
+        initializeFirebase();
+        setupEventListeners();
     </script>
 </body>
 </html>
