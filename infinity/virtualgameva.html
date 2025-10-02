@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Makeover Game</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .camera-section {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .video-container {
+            position: relative;
+            display: inline-block;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        #video {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            display: block;
+        }
+
+        .overlay-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .overlay-item {
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+
+        .hair-overlay {
+            top: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 40%;
+        }
+
+        .clothes-overlay {
+            top: 35%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 50%;
+        }
+
+        .accessories-overlay {
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 30%;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group h3 {
+            color: #333;
+            margin: 0 0 15px 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .option-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .option-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .camera-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .option-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Virtual Makeover Game</h1>
+            <p>Transform your look with our interactive makeover experience!</p>
+        </div>
+
+        <div class="game-area">
+            <div class="camera-section">
+                <div class="video-container">
+                    <video id="video" autoplay muted playsinline></video>
+                    <div class="overlay-container">
+                        <div id="hair-overlay" class="overlay-item hair-overlay"></div>
+                        <div id="clothes-overlay" class="overlay-item clothes-overlay"></div>
+                        <div id="accessories-overlay" class="overlay-item accessories-overlay"></div>
+                    </div>
+                </div>
+                
+                <div class="camera-controls">
+                    <button id="startCamera" class="btn btn-primary">📹 Start Camera</button>
+                    <button id="capturePhoto" class="btn btn-success" disabled>📸 Take Photo</button>
+                    <button id="downloadPhoto" class="btn btn-secondary" disabled>💾 Download PNG</button>
+                </div>
+                
+                <div id="status" class="status" style="display: none;"></div>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <h3>👤 Gender</h3>
+                    <div class="option-grid">
+                        <button class="option-btn" data-type="gender" data-value="feminine">👩 Feminine</button>
+                        <button class="option-btn" data-type="gender" data-value="masculine">👨 Masculine</button>
+                        <button class="option-btn active" data-type="gender" data-value="neutral">🧑 Neutral</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>💇 Hairstyles</h3>
+                    <div class="option-grid">
+                        <button class="option-btn active" data-type="hair" data-value="none">None</button>
+                        <button class="option-btn" data-type="hair" data-value="long">Long Hair</button>
+                        <button class="option-btn" data-type="hair" data-value="short">Short Hair</button>
+                        <button class="option-btn" data-type="hair" data-value="curly">Curly Hair</button>
+                        <button class="option-btn" data-type="hair" data-value="bob">Bob Cut</button>
+                        <button class="option-btn" data-type="hair" data-value="pixie">Pixie Cut</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>👔 Tops</h3>
+                    <div class="option-grid">
+                        <button class="option-btn active" data-type="top" data-value="none">None</button>
+                        <button class="option-btn" data-type="top" data-value="tshirt">T-Shirt</button>
+                        <button class="option-btn" data-type="top" data-value="shirt">Dress Shirt</button>
+                        <button class="option-btn" data-type="top" data-value="hoodie">Hoodie</button>
+                        <button class="option-btn" data-type="top" data-value="blazer">Blazer</button>
+                        <button class="option-btn" data-type="top" data-value="dress">Dress</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>👖 Bottoms</h3>
+                    <div class="option-grid">
+                        <button class="option-btn active" data-type="bottom" data-value="none">None</button>
+                        <button class="option-btn" data-type="bottom" data-value="jeans">Jeans</button>
+                        <button class="option-btn" data-type="bottom" data-value="pants">Dress Pants</button>
+                        <button class="option-btn" data-type="bottom" data-value="shorts">Shorts</button>
+                        <button class="option-btn" data-type="bottom" data-value="skirt">Skirt</button>
+                        <button class="option-btn" data-type="bottom" data-value="leggings">Leggings</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>👟 Footwear</h3>
+                    <div class="option-grid">
+                        <button class="option-btn active" data-type="shoes" data-value="none">None</button>
+                        <button class="option-btn" data-type="shoes" data-value="sneakers">Sneakers</button>
+                        <button class="option-btn" data-type="shoes" data-value="boots">Boots</button>
+                        <button class="option-btn" data-type="shoes" data-value="heels">Heels</button>
+                        <button class="option-btn" data-type="shoes" data-value="sandals">Sandals</button>
+                        <button class="option-btn" data-type="shoes" data-value="loafers">Loafers</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>👓 Accessories</h3>
+                    <div class="option-grid">
+                        <button class="option-btn active" data-type="accessories" data-value="none">None</button>
+                        <button class="option-btn" data-type="accessories" data-value="glasses">Glasses</button>
+                        <button class="option-btn" data-type="accessories" data-value="sunglasses">Sunglasses</button>
+                        <button class="option-btn" data-type="accessories" data-value="hat">Hat</button>
+                        <button class="option-btn" data-type="accessories" data-value="earrings">Earrings</button>
+                        <button class="option-btn" data-type="accessories" data-value="necklace">Necklace</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class VirtualMakeover {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.stream = null;
+                this.currentOptions = {
+                    gender: 'neutral',
+                    hair: 'none',
+                    top: 'none',
+                    bottom: 'none',
+                    shoes: 'none',
+                    accessories: 'none'
+                };
+                
+                this.initializeEventListeners();
+                this.generateOverlays();
+            }
+
+            initializeEventListeners() {
+                document.getElementById('startCamera').addEventListener('click', () => this.startCamera());
+                document.getElementById('capturePhoto').addEventListener('click', () => this.capturePhoto());
+                document.getElementById('downloadPhoto').addEventListener('click', () => this.downloadPhoto());
+
+                // Option buttons
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.selectOption(e.target));
+                });
+            }
+
+            async startCamera() {
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        } 
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.onloadedmetadata = () => {
+                        document.getElementById('capturePhoto').disabled = false;
+                        this.showStatus('Camera started! You can now take photos.', 'success');
+                    };
+                    
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    this.showStatus('Unable to access camera. Please check permissions.', 'error');
+                }
+            }
+
+            selectOption(button) {
+                const type = button.dataset.type;
+                const value = button.dataset.value;
+                
+                // Update active state
+                button.parentElement.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
+                
+                // Update current options
+                this.currentOptions[type] = value;
+                
+                // Update overlays
+                this.updateOverlays();
+            }
+
+            generateOverlays() {
+                this.overlayStyles = {
+                    hair: {
+                        none: '',
+                        long: this.createHairSVG('#8B4513', 'M20,20 Q50,10 80,20 Q90,40 80,60 Q50,70 20,60 Q10,40 20,20'),
+                        short: this.createHairSVG('#654321', 'M25,25 Q50,15 75,25 Q80,35 75,45 Q50,50 25,45 Q20,35 25,25'),
+                        curly: this.createHairSVG('#D2691E', 'M20,20 Q30,10 40,20 Q50,10 60,20 Q70,10 80,20 Q85,40 80,60 Q70,70 60,60 Q50,70 40,60 Q30,70 20,60 Q15,40 20,20'),
+                        bob: this.createHairSVG('#8B4513', 'M22,22 Q50,12 78,22 Q85,38 78,55 Q50,65 22,55 Q15,38 22,22'),
+                        pixie: this.createHairSVG('#654321', 'M30,30 Q50,20 70,30 Q75,40 70,50 Q50,55 30,50 Q25,40 30,30')
+                    },
+                    top: {
+                        none: '',
+                        tshirt: this.createClothingSVG('#4A90E2', 'M30,40 L70,40 L75,80 L25,80 Z'),
+                        shirt: this.createClothingSVG('#FFFFFF', 'M30,40 L70,40 L75,80 L25,80 Z', '#000000'),
+                        hoodie: this.createClothingSVG('#666666', 'M25,35 Q50,30 75,35 L80,85 L20,85 Z'),
+                        blazer: this.createClothingSVG('#2C3E50', 'M28,38 L72,38 L78,85 L22,85 Z'),
+                        dress: this.createClothingSVG('#E74C3C', 'M30,40 L70,40 L80,90 L20,90 Z')
+                    },
+                    accessories: {
+                        none: '',
+                        glasses: this.createAccessorySVG('glasses'),
+                        sunglasses: this.createAccessorySVG('sunglasses'),
+                        hat: this.createAccessorySVG('hat'),
+                        earrings: this.createAccessorySVG('earrings'),
+                        necklace: this.createAccessorySVG('necklace')
+                    }
+                };
+            }
+
+            createHairSVG(color, path) {
+                return `<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+                    <path d="${path}" fill="${color}" stroke="${color}" stroke-width="2"/>
+                </svg>`;
+            }
+
+            createClothingSVG(color, path, strokeColor = null) {
+                const stroke = strokeColor ? `stroke="${strokeColor}" stroke-width="1"` : '';
+                return `<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+                    <path d="${path}" fill="${color}" ${stroke}/>
+                </svg>`;
+            }
+
+            createAccessorySVG(type) {
+                const accessories = {
+                    glasses: '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;"><rect x="15" y="45" width="25" height="15" fill="none" stroke="#333" stroke-width="2" rx="3"/><rect x="60" y="45" width="25" height="15" fill="none" stroke="#333" stroke-width="2" rx="3"/><line x1="40" y1="52" x2="60" y2="52" stroke="#333" stroke-width="2"/></svg>',
+                    sunglasses: '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;"><rect x="15" y="45" width="25" height="15" fill="#333" stroke="#333" stroke-width="2" rx="3"/><rect x="60" y="45" width="25" height="15" fill="#333" stroke="#333" stroke-width="2" rx="3"/><line x1="40" y1="52" x2="60" y2="52" stroke="#333" stroke-width="2"/></svg>',
+                    hat: '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;"><ellipse cx="50" cy="25" rx="35" ry="8" fill="#8B4513"/><rect x="20" y="25" width="60" height="20" fill="#8B4513" rx="5"/></svg>',
+                    earrings: '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;"><circle cx="20" cy="55" r="3" fill="#FFD700"/><circle cx="80" cy="55" r="3" fill="#FFD700"/></svg>',
+                    necklace: '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;"><path d="M30,70 Q50,80 70,70" fill="none" stroke="#FFD700" stroke-width="3"/><circle cx="50" cy="75" r="4" fill="#FFD700"/></svg>'
+                };
+                return accessories[type] || '';
+            }
+
+            updateOverlays() {
+                // Update hair overlay
+                const hairOverlay = document.getElementById('hair-overlay');
+                hairOverlay.innerHTML = this.overlayStyles.hair[this.currentOptions.hair];
+
+                // Update clothes overlay
+                const clothesOverlay = document.getElementById('clothes-overlay');
+                clothesOverlay.innerHTML = this.overlayStyles.top[this.currentOptions.top];
+
+                // Update accessories overlay
+                const accessoriesOverlay = document.getElementById('accessories-overlay');
+                accessoriesOverlay.innerHTML = this.overlayStyles.accessories[this.currentOptions.accessories];
+            }
+
+            capturePhoto() {
+                if (!this.stream) {
+                    this.showStatus('Please start the camera first.', 'error');
+                    return;
+                }
+
+                const videoRect = this.video.getBoundingClientRect();
+                this.canvas.width = this.video.videoWidth;
+                this.canvas.height = this.video.videoHeight;
+
+                // Draw video frame
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw overlays on canvas
+                this.drawOverlaysOnCanvas();
+
+                document.getElementById('downloadPhoto').disabled = false;
+                this.showStatus('Photo captured! Click download to save as PNG.', 'success');
+            }
+
+            drawOverlaysOnCanvas() {
+                const scaleX = this.canvas.width / this.video.offsetWidth;
+                const scaleY = this.canvas.height / this.video.offsetHeight;
+
+                // Create temporary canvas for each overlay
+                const overlays = ['hair', 'clothes', 'accessories'];
+                
+                overlays.forEach(overlayType => {
+                    const overlayElement = document.getElementById(`${overlayType}-overlay`);
+                    if (overlayElement.innerHTML) {
+                        const svgData = overlayElement.innerHTML;
+                        const img = new Image();
+                        const svgBlob = new Blob([svgData], {type: 'image/svg+xml'});
+                        const url = URL.createObjectURL(svgBlob);
+                        
+                        img.onload = () => {
+                            const rect = overlayElement.getBoundingClientRect();
+                            const videoRect = this.video.getBoundingClientRect();
+                            
+                            const x = (rect.left - videoRect.left) * scaleX;
+                            const y = (rect.top - videoRect.top) * scaleY;
+                            const width = rect.width * scaleX;
+                            const height = rect.height * scaleY;
+                            
+                            this.ctx.drawImage(img, x, y, width, height);
+                            URL.revokeObjectURL(url);
+                        };
+                        
+                        img.src = url;
+                    }
+                });
+            }
+
+            downloadPhoto() {
+                if (!this.canvas.width) {
+                    this.showStatus('Please capture a photo first.', 'error');
+                    return;
+                }
+
+                const link = document.createElement('a');
+                link.download = `makeover-${Date.now()}.png`;
+                link.href = this.canvas.toDataURL('image/png');
+                link.click();
+                
+                this.showStatus('Photo downloaded successfully!', 'success');
+            }
+
+            showStatus(message, type) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = `status ${type}`;
+                status.style.display = 'block';
+                
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VirtualMakeover();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9881853267bd7e32',t:'MTc1OTM4MDAxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
