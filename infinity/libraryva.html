@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .book-spine {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+        .book-hover {
+            transition: all 0.3s ease;
+        }
+        .book-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .category-tab {
+            transition: all 0.3s ease;
+        }
+        .category-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .pdf-viewer {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-amber-50 to-orange-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-amber-800 to-orange-700 text-white p-6 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-4xl font-bold mb-2">📚 Digital Library</h1>
+            <p class="text-amber-100">Free access to books, PDFs, and learning materials</p>
+        </div>
+    </header>
+
+    <div class="container mx-auto p-6">
+        <!-- Category Tabs -->
+        <div class="mb-8">
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button class="category-tab active px-6 py-3 rounded-lg font-semibold bg-white shadow-md" data-category="all">
+                    📖 All Books
+                </button>
+                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="programming">
+                    💻 Programming
+                </button>
+                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="science">
+                    🔬 Science
+                </button>
+                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="literature">
+                    📝 Literature
+                </button>
+                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="business">
+                    💼 Business
+                </button>
+                <button class="category-tab px-6 py-3 rounded-lg font-semibold bg-white shadow-md hover:bg-gray-50" data-category="automation">
+                    🤖 Automation Testing
+                </button>
+            </div>
+        </div>
+
+        <!-- Bookshelf -->
+        <div class="bg-gradient-to-b from-amber-900 to-amber-800 p-8 rounded-xl shadow-2xl mb-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4" id="bookshelf">
+                <!-- Books will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Book Details Modal -->
+        <div id="bookModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="modalTitle" class="text-2xl font-bold text-gray-800"></h2>
+                        <button id="closeModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div id="modalCover" class="w-full h-64 bg-gradient-to-br rounded-lg mb-4"></div>
+                            <div class="space-y-2">
+                                <p><strong>Author:</strong> <span id="modalAuthor"></span></p>
+                                <p><strong>Category:</strong> <span id="modalCategory"></span></p>
+                                <p><strong>Pages:</strong> <span id="modalPages"></span></p>
+                                <p><strong>Year:</strong> <span id="modalYear"></span></p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3">Description</h3>
+                            <p id="modalDescription" class="text-gray-600 mb-4"></p>
+                            
+                            <div class="space-y-3">
+                                <button id="viewPdfBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
+                                    📄 View PDF
+                                </button>
+                                <button id="viewSlidesBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
+                                    🎯 View Slides
+                                </button>
+                                <button id="takeTestBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
+                                    ✅ Take QA Test
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Viewer Modal -->
+        <div id="pdfModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">PDF Viewer</h3>
+                    <button id="closePdfModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <div class="pdf-viewer h-96 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">📄</div>
+                        <p class="text-gray-600 mb-4">PDF content would be displayed here</p>
+                        <p class="text-sm text-gray-500">In a real implementation, this would integrate with PDF.js or similar library</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slides Viewer Modal -->
+        <div id="slidesModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Presentation Slides</h3>
+                    <button id="closeSlidesModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <div class="pdf-viewer h-96 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">🎯</div>
+                        <p class="text-gray-600 mb-4">Interactive slides would be displayed here</p>
+                        <div class="flex gap-2 justify-center">
+                            <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">← Previous</button>
+                            <span class="px-4 py-2">Slide 1 of 15</span>
+                            <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">Next →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QA Test Modal -->
+        <div id="testModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">QA Test</h3>
+                        <button id="closeTestModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                    </div>
+                    
+                    <div id="testContent">
+                        <div class="mb-6">
+                            <h4 class="font-semibold mb-3">Question 1 of 5</h4>
+                            <p class="mb-4">What is the main concept covered in this book?</p>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="radio" name="q1" value="a" class="mr-2">
+                                    <span>Programming fundamentals</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="q1" value="b" class="mr-2">
+                                    <span>Advanced algorithms</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="q1" value="c" class="mr-2">
+                                    <span>Web development</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">Next Question</button>
+                            <button class="bg-gray-200 hover:bg-gray-300 px-6 py-2 rounded-lg">Skip</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-6 mt-12">
+        <div class="container mx-auto text-center">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <span class="text-2xl">💡</span>
+                <span class="text-lg font-semibold">Idea by KMT</span>
+            </div>
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <span class="text-2xl">🎨</span>
+                <span class="text-lg font-semibold">Powered by Canva AI</span>
+            </div>
+            <p class="text-gray-300 text-sm">Built with intelligence, designed with creativity</p>
+        </div>
+    </footer>
+
+    <script>
+        // Sample book data
+        const books = [
+            {
+                id: 1,
+                title: "JavaScript Fundamentals",
+                author: "John Smith",
+                category: "programming",
+                color: "from-blue-500 to-blue-700",
+                pages: 320,
+                year: 2023,
+                description: "A comprehensive guide to modern JavaScript programming, covering ES6+ features, async programming, and best practices."
+            },
+            {
+                id: 2,
+                title: "Physics Principles",
+                author: "Dr. Sarah Johnson",
+                category: "science",
+                color: "from-green-500 to-green-700",
+                pages: 450,
+                year: 2022,
+                description: "Explore the fundamental principles of physics with clear explanations and practical examples."
+            },
+            {
+                id: 3,
+                title: "Classic Literature",
+                author: "Emily Davis",
+                category: "literature",
+                color: "from-purple-500 to-purple-700",
+                pages: 280,
+                year: 2021,
+                description: "An anthology of timeless literary works with modern analysis and interpretation."
+            },
+            {
+                id: 4,
+                title: "Business Strategy",
+                author: "Michael Brown",
+                category: "business",
+                color: "from-red-500 to-red-700",
+                pages: 380,
+                year: 2023,
+                description: "Strategic thinking and planning for modern businesses in a digital world."
+            },
+            {
+                id: 5,
+                title: "Python Programming",
+                author: "Lisa Wilson",
+                category: "programming",
+                color: "from-yellow-500 to-yellow-700",
+                pages: 420,
+                year: 2023,
+                description: "Learn Python from basics to advanced topics including data science and web development."
+            },
+            {
+                id: 6,
+                title: "Chemistry Basics",
+                author: "Dr. Robert Lee",
+                category: "science",
+                color: "from-teal-500 to-teal-700",
+                pages: 350,
+                year: 2022,
+                description: "Understanding chemical reactions, molecular structures, and laboratory techniques."
+            },
+            {
+                id: 7,
+                title: "Selenium WebDriver Guide",
+                author: "Alex Martinez",
+                category: "automation",
+                color: "from-indigo-500 to-indigo-700",
+                pages: 480,
+                year: 2023,
+                description: "Complete guide to web automation testing with Selenium WebDriver, including best practices and advanced techniques."
+            },
+            {
+                id: 8,
+                title: "API Testing Mastery",
+                author: "Jennifer Chen",
+                category: "automation",
+                color: "from-cyan-500 to-cyan-700",
+                pages: 320,
+                year: 2023,
+                description: "Master API testing with REST, GraphQL, and automation tools like Postman, Newman, and custom frameworks."
+            },
+            {
+                id: 9,
+                title: "Cypress Testing Framework",
+                author: "David Kumar",
+                category: "automation",
+                color: "from-emerald-500 to-emerald-700",
+                pages: 290,
+                year: 2023,
+                description: "Modern end-to-end testing with Cypress framework, including real-time browser testing and debugging."
+            },
+            {
+                id: 10,
+                title: "Test Automation Strategy",
+                author: "Maria Rodriguez",
+                category: "automation",
+                color: "from-violet-500 to-violet-700",
+                pages: 380,
+                year: 2022,
+                description: "Strategic approach to building scalable test automation frameworks and implementing CI/CD pipelines."
+            },
+            {
+                id: 11,
+                title: "Mobile Testing Automation",
+                author: "James Park",
+                category: "automation",
+                color: "from-rose-500 to-rose-700",
+                pages: 340,
+                year: 2023,
+                description: "Comprehensive guide to mobile app testing automation using Appium, Espresso, and XCUITest frameworks."
+            },
+            {
+                id: 12,
+                title: "Performance Testing Tools",
+                author: "Sarah Thompson",
+                category: "automation",
+                color: "from-amber-500 to-amber-700",
+                pages: 420,
+                year: 2023,
+                description: "Load testing, stress testing, and performance monitoring with JMeter, K6, and cloud-based solutions."
+            }
+        ];
+
+        let currentCategory = 'all';
+        let currentBook = null;
+
+        // Initialize the library
+        function initLibrary() {
+            renderBooks();
+            setupEventListeners();
+        }
+
+        // Render books based on current category
+        function renderBooks() {
+            const bookshelf = document.getElementById('bookshelf');
+            const filteredBooks = currentCategory === 'all' 
+                ? books 
+                : books.filter(book => book.category === currentCategory);
+
+            bookshelf.innerHTML = filteredBooks.map(book => `
+                <div class="book-hover cursor-pointer" onclick="openBookModal(${book.id})">
+                    <div class="bg-gradient-to-b ${book.color} h-48 w-12 rounded-t-sm rounded-b-md shadow-lg relative group">
+                        <div class="book-spine h-full flex items-center justify-center p-2">
+                            <span class="text-white text-xs font-bold text-center leading-tight">
+                                ${book.title}
+                            </span>
+                        </div>
+                        <div class="absolute -top-1 left-0 right-0 h-2 bg-gradient-to-r ${book.color} rounded-t-sm opacity-80"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Category tabs
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentCategory = e.target.dataset.category;
+                    renderBooks();
+                });
+            });
+
+            // Modal close buttons
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.getElementById('bookModal').classList.add('hidden');
+            });
+
+            document.getElementById('closePdfModal').addEventListener('click', () => {
+                document.getElementById('pdfModal').classList.add('hidden');
+            });
+
+            document.getElementById('closeSlidesModal').addEventListener('click', () => {
+                document.getElementById('slidesModal').classList.add('hidden');
+            });
+
+            document.getElementById('closeTestModal').addEventListener('click', () => {
+                document.getElementById('testModal').classList.add('hidden');
+            });
+
+            // Action buttons
+            document.getElementById('viewPdfBtn').addEventListener('click', () => {
+                document.getElementById('pdfModal').classList.remove('hidden');
+            });
+
+            document.getElementById('viewSlidesBtn').addEventListener('click', () => {
+                document.getElementById('slidesModal').classList.remove('hidden');
+            });
+
+            document.getElementById('takeTestBtn').addEventListener('click', () => {
+                document.getElementById('testModal').classList.remove('hidden');
+            });
+        }
+
+        // Open book modal
+        function openBookModal(bookId) {
+            currentBook = books.find(book => book.id === bookId);
+            if (!currentBook) return;
+
+            document.getElementById('modalTitle').textContent = currentBook.title;
+            document.getElementById('modalAuthor').textContent = currentBook.author;
+            document.getElementById('modalCategory').textContent = currentBook.category.charAt(0).toUpperCase() + currentBook.category.slice(1);
+            document.getElementById('modalPages').textContent = currentBook.pages;
+            document.getElementById('modalYear').textContent = currentBook.year;
+            document.getElementById('modalDescription').textContent = currentBook.description;
+            
+            const modalCover = document.getElementById('modalCover');
+            modalCover.className = `w-full h-64 bg-gradient-to-br ${currentBook.color} rounded-lg mb-4 flex items-center justify-center`;
+            modalCover.innerHTML = `<span class="text-white text-xl font-bold text-center p-4">${currentBook.title}</span>`;
+
+            document.getElementById('bookModal').classList.remove('hidden');
+        }
+
+        // Initialize the library when page loads
+        initLibrary();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'988199a43722445e',t:'MTc1OTM4MDg0OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
