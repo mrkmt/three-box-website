@@ -1,0 +1,13 @@
+# netlify.toml
+
+[build]
+  # သင့်ရဲ့ build command (ဥပမာ: "npm run build" သို့မဟုတ် "jekyll build" စသည်)
+  # သင်က Vanilla JS/HTML ဖြစ်လို့၊ ဒီနေရာမှာ build command မလိုအပ်ရင် ဖျက်နိုင်ပါတယ်
+  # command = "..."
+  
+  # deploy လုပ်မယ့် folder ကို ညွှန်ပြပါ
+  publish = "."
+
+[functions]
+  # Netlify Functions တွေရှိရာ directory ကို ညွှန်ပြခြင်း
+  directory = "netlify/functions"
