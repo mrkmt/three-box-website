@@ -356,16 +356,17 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script type="module">
-       
+
         // --- Firebase Globals & Setup ---
         const firebaseConfig = {
-            apiKey: process.env.VITE_FIREBASE_API_KEY,
-            authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
-            projectId: "kmtechspaceship",
-            storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
-            messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-            appId: process.env.VITE_FIREBASE_APP_ID,
-            measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
+            // ⚠️ လုံခြုံရေးအရ Netlify Dashboard ထဲက Keys တွေကို တိုက်ရိုက်ပြန်ထည့်ပါ။
+            apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw", // <--- VITE_FIREBASE_API_KEY တန်ဖိုး
+            authDomain: "kmtechspaceship.firebaseapp.com",    // <--- VITE_FIREBASE_AUTH_DOMAIN တန်ဖိုး
+            projectId: "kmtechspaceship",                     // <--- VITE_FIREBASE_PROJECT_ID တန်ဖိုး
+            storageBucket: "kmtechspaceship.firebasestorage.app",
+            messagingSenderId: "494150534835",
+            appId: "1:494150534835:web:d2b654e04d7b52ca1912c6",
+            measurementId: "G-CWJ6BXN5TY"
         };
 
         const appIdForPath = firebaseConfig.projectId;
