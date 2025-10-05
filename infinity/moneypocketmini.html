@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@14.9.15/build/Tone.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, getAuth, getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
@@ -21,7 +21,7 @@
     </script>
     
     <!-- Chosen Palette: Dynamic based on theme (Festive, Modern, Minimal) -->
-    <!-- Application Structure Plan: Mobile-first layout restored. Secured Admin Panel for configuration and Global Reset. Instant play (Time Lock removed). -->
+    <!-- Application Structure Plan: Mobile-first layout restored. Secured Admin Panel for configuration and Global Reset. Instant play (Time Lock removed). Robust initial data check implemented. -->
     <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts, enhanced engagement, and customization. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing dynamic theme colors. Confetti animation (Canvas/JS) for celebration. Result Modal (HTML/CSS) for focused output. Interaction: Sound effects for spin/result. Admin theme and title selection. PNG download of the result. Justification: Mobile-optimized CSS/Tailwind for better responsive UX. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling, Tone.js for audio, Canvas for PNG download and Confetti. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -350,6 +350,10 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script type="module">
+        // --- Hardcoded Authentication Credentials (NEW PASSWORD) ---
+        const ADMIN_USERNAME = 'kmt';
+        const ADMIN_PASSWORD = 'Thadingyut2026'; 
+        
         // --- Firebase Globals & Setup (Using user's provided hardcoded config) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw",
@@ -362,12 +366,14 @@
         };
         
         const appIdForPath = firebaseConfig.projectId; 
+        // FIX: New Collection Name for a clean slate
+        const GAME_COLLECTION_NAME = 'thadingyut_money_pocket';
+        const GAME_DOC_PATH = `artifacts/${appIdForPath}/public/data/${GAME_COLLECTION_NAME}/config`;
+
 
         let db, auth;
         let userId = null;
         let gameData = null;
-
-        const GAME_DOC_PATH = `artifacts/${appIdForPath}/public/data/thadingyut_game/config`;
 
 
         // --- Theme Definitions ---
@@ -392,7 +398,7 @@
             }
         };
 
-        // --- Default Data (FIXED: Added user's required initial data) ---
+        // --- Default Data (User's requirements) ---
         const defaultData = {
             appTitle: 'Testing Team', 
             totalAmount: 30000,
@@ -418,7 +424,7 @@
         ];
 
 
-        // --- DOM Elements ---
+        // --- DOM Elements (Same as last optimized version) ---
         const loadingScreenEl = document.getElementById('loading-screen');
         const loginSectionEl = document.getElementById('login-section');
         const adminPanelEl = document.getElementById('admin-panel');
@@ -442,7 +448,6 @@
         const spinStatusEl = document.getElementById('spin-status');
         const globalResetBtn = document.getElementById('global-reset-btn');
         
-        // Modal Elements
         const modalOverlayEl = document.getElementById('result-modal-overlay');
         const modalMemberNameEl = document.getElementById('modal-member-name');
         const modalResultColorDisplayEl = document.getElementById('modal-result-color-display');
@@ -455,7 +460,6 @@
         const mainSubtitleEl = document.getElementById('main-subtitle');
         const appTitleInputEl = document.getElementById('app-title-input');
         
-        // Confetti Canvas
         const confettiCanvas = document.getElementById('confetti-canvas');
         const confettiCtx = confettiCanvas.getContext('2d');
         let confettiPieces = [];
@@ -492,14 +496,18 @@
                         }
                     }
                     
-                    // FIX: Check if data exists before setting up listener. 
-                    // This handles initial load where data might be missing.
+                    // --- Check and Initialize Default Data ---
                     const docRef = firebase.doc(db, GAME_DOC_PATH);
-                    const docSnap = await firebase.getDoc(docRef);
-                    if (!docSnap.exists()) {
-                        console.log("Firestore data not found. Initializing default game data.");
-                        await initializeDefaultGame();
+                    try {
+                         const docSnap = await firebase.getDoc(docRef);
+                         if (!docSnap.exists()) {
+                             console.log("Firestore data not found. Initializing default game data.");
+                             await initializeDefaultGame();
+                         }
+                    } catch(e) {
+                         console.warn("Could not check Firestore existence. Relying on listener for data.");
                     }
+                    // --- End Check and Initialize Default Data ---
                     
                     setupGameListener();
                     setupTone(); 
@@ -573,9 +581,15 @@
                     if (gameData.theme === undefined) gameData.theme = defaultData.theme;
                     
                     renderGameUI();
-                } // else: Initialization happened in initFirebase, so we skip the check here.
+                } else {
+                    // This block is only reached if the document is deleted after initial load.
+                    initializeDefaultGame();
+                }
             }, (error) => {
                 console.error("Firestore Listener Error:", error);
+                loadingScreenEl.classList.add('hidden');
+                gameViewEl.classList.remove('hidden'); 
+                spinStatusEl.textContent = `❌ Data ရယူမှု အမှား။ (${error.message || 'Error'})`;
             });
         }
         
@@ -589,7 +603,7 @@
                 spinnerId: null
             }));
 
-            // Calculate initial prizes using the default configuration
+            // Slice only 9 default prizes for 9 members
             const initialPrizes = calculateRandomPrizes(DEFAULT_PRIZES.slice(0, members.length), defaultData.totalAmount, defaultData.minAmount, defaultData.maxAmount);
 
             const initialData = {
@@ -606,7 +620,6 @@
             try {
                 const docRef = firebase.doc(db, GAME_DOC_PATH);
                 await firebase.setDoc(docRef, initialData);
-                // After setting default data, the listener will pick it up and call renderGameUI()
             } catch (e) {
                 console.error("Failed to initialize default game data:", e);
             }
@@ -655,8 +668,7 @@
         }
 
         function renderWheel() {
-            // FIX: Ensure gameData and gameData.prizes exists before reading length
-            if (!gameData || !gameData.prizes) return;
+            if (!gameData || !gameData.prizes || !Array.isArray(gameData.prizes)) return;
             
             const prizes = gameData.prizes; 
             const numSegments = prizes.length;
@@ -697,15 +709,13 @@
         }
         
         function renderSpinnerSelection() {
-            // FIX: Ensure gameData and gameData.teamMembers exists before using it
-            if (!gameData || !gameData.teamMembers) return; 
+            if (!gameData || !gameData.teamMembers || !Array.isArray(gameData.teamMembers)) return; 
 
             const members = gameData.teamMembers;
             spinnerSelectEl.innerHTML = '<option value="" disabled selected>--- ရွေးချယ်ပါ ---</option>';
             generateBtn.disabled = true;
             resetInfoEl.classList.add('hidden');
             
-            // If currently spinning, keep the current text/state
             if (generateBtn.textContent.includes('လှည့်နေသည်')) {
                 return; 
             }
@@ -755,7 +765,7 @@
 
         async function handleSpin() {
             const selectedName = spinnerSelectEl.value;
-            if (!selectedName || generateBtn.disabled) return;
+            if (!selectedName || generateBtn.disabled || !gameData) return;
             
             const currentMemberIndex = gameData.teamMembers.findIndex(m => m.name === selectedName);
             const currentMember = gameData.teamMembers[currentMemberIndex];
@@ -1019,57 +1029,27 @@
              }
         }
 
-         // --- Admin Panel Functions ---
+        // --- Admin Panel Functions ---
 
-        async function handleLogin(event) {
+        function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Error message ကို အရင်ဖျောက်ထားပါ
-            loginErrorEl.classList.add('hidden');
-
-            // Login စစ်ဆေးမှုကို Netlify Function (Server) ဆီ POST Request ပို့လိုက်ခြင်း
-            try {
-                const response = await fetch('/.netlify/functions/admin-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password }) // Username, Password ကို Server ကို ပို့လိုက်ခြင်း
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    // 200 OK နဲ့ Server က success ပြန်ပို့ရင် Login အောင်မြင်
-
-                    // Server က ပေးလိုက်တဲ့ Token ကို Browser ရဲ့ LocalStorage မှာ သိမ်းပါ
-                    localStorage.setItem('adminToken', data.token);
-
-                    // UI ကို Admin Panel ဖွင့်ဖို့ ပြင်ဆင်ပါ
-                    loginSectionEl.classList.add('hidden');
-                    adminPanelEl.classList.remove('hidden');
-                    loginErrorEl.classList.add('hidden');
-
-                    // Admin Panel အတွက် လိုအပ်တဲ့ data တွေ ပြန်ခေါ်ပြီး ပြသပါ
-                    updateAdminPanelForms();
-                    renderAdminResultsTable();
-                    calculateAndDisplayPrizeSum();
-
-                } else {
-                    // Login မအောင်မြင်ရင် Error ပြပါ (Server Function က ပေးလိုက်တဲ့ message ကို ပြပါ)
-                    loginErrorEl.textContent = data.message || 'ဝင်ရောက်ခွင့် မပြုပါ';
-                    loginErrorEl.classList.remove('hidden');
-                }
-
-            } catch (e) {
-                console.error("Login API Error:", e);
-                loginErrorEl.textContent = '❌ စနစ်ချိတ်ဆက်မှု အမှားဖြစ်ပွားပါသည်။';
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                loginSectionEl.classList.add('hidden');
+                adminPanelEl.classList.remove('hidden');
+                loginErrorEl.classList.add('hidden');
+                updateAdminPanelForms();
+                renderAdminResultsTable();
+                calculateAndDisplayPrizeSum();
+            } else {
+                loginErrorEl.textContent = 'အသုံးပြုသူအမည် (သို့) လျှို့ဝှက်နံပါတ် မမှန်ကန်ပါ။';
                 loginErrorEl.classList.remove('hidden');
             }
         }
 
         function updateAdminPanelForms() {
-            // FIX: Added robust checks for nested data structures
             if (!gameData || !gameData.teamMembers || !gameData.prizes) return;
 
             appTitleInputEl.value = gameData.appTitle; 
@@ -1145,12 +1125,12 @@
                 }
             }
             
-            // FIX: Ensure colorName is copied from the original prize list if it exists
+            // Return updated prizes while preserving all original color/hex properties
             return prizes.map((prize, index) => ({
-                colorName: prize.colorName, // Preserve original color name
-                hex: prize.hex, // Preserve original hex
-                allocated: prize.allocated, // Preserve allocated status
-                amount: amounts[index] || min // Use calculated amount
+                colorName: prize.colorName, 
+                hex: prize.hex, 
+                allocated: prize.allocated, 
+                amount: amounts[index] || min 
             }));
         }
 
@@ -1166,8 +1146,12 @@
             const currentMin = parseInt(document.getElementById('min-amount').value);
             const currentMax = parseInt(document.getElementById('max-amount').value);
 
-            // FIX: Use current gameData.prizes for names and hexes when recalculating amounts
-            const currentPrizesState = gameData.prizes.map(p => ({ colorName: p.colorName, hex: p.hex, allocated: p.allocated }));
+            // Use current gameData.prizes for names and hexes when recalculating amounts
+            const currentPrizesState = gameData.prizes.map(p => ({ 
+                colorName: p.colorName, 
+                hex: p.hex, 
+                allocated: p.allocated 
+            }));
 
             let recalculatedPrizes = calculateRandomPrizes(
                 currentPrizesState, 
@@ -1189,7 +1173,6 @@
                 
                 const nameInput = `<input type="text" data-index="${index}" data-field="colorName" placeholder="အရောင်အမည်" class="col-span-2 p-1 text-sm rounded-md" value="${prize.colorName}">`;
                 
-                // Amount input field is always 0 if Total Amount is 0
                 const amountValue = isZeroMode ? 0 : prize.amount;
                 const amountClasses = isZeroMode ? 'bg-gray-300 text-gray-700' : 'bg-gray-200 text-red-700';
 
@@ -1283,8 +1266,8 @@
             }
             
             const prizeCount = gameData.prizes.length;
-            // Ensure newly added prizes have distinct color names
-            const newPrize = { colorName: `ဆုအရောင် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
+            // Preserve existing names when adding new members/prizes
+            const newPrize = { colorName: DEFAULT_PRIZES[prizeCount]?.colorName || `ဆုအရောင် ${prizeCount + 1}`, hex: DEFAULT_PRIZES[prizeCount]?.hex || "#CCCCCC", amount: 1000, allocated: false };
             gameData.prizes.push(newPrize);
             
             renderPrizeSetupForms(); 
@@ -1381,7 +1364,6 @@
                     <td class="p-3 text-center text-sm">${colorDisplay}</td>
                     <td class="p-3 text-right font-mono font-bold text-red-700">${amountDisplay}</td>
                 `;
-                // Removed Reset TD for individual reset button
                 adminResultsTableEl.appendChild(tr);
             });
 
@@ -1562,8 +1544,13 @@
                     // Update prize count based on member count automatically
                     while (gameData.prizes.length < newMembersCount) {
                         const prizeCount = gameData.prizes.length;
-                        // Preserve existing names when adding new members/prizes
-                        const newPrize = { colorName: `ဆုအရောင် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
+                        // Use default prize name/hex if available, otherwise generic
+                        const newPrize = { 
+                            colorName: DEFAULT_PRIZES[prizeCount]?.colorName || `ဆုအရောင် ${prizeCount + 1}`, 
+                            hex: DEFAULT_PRIZES[prizeCount]?.hex || "#CCCCCC", 
+                            amount: 1000, 
+                            allocated: false 
+                        };
                         gameData.prizes.push(newPrize);
                     }
                     while (gameData.prizes.length > newMembersCount) {
