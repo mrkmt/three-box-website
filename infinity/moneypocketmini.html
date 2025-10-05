@@ -141,7 +141,7 @@
         </header>
 
         <main
-            class="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[500px] relative">
+            class="bg-white/60 backdrop-blur-sm p-4 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[500px] relative">
 
             <!-- Admin Controls Button -->
             <div class="mb-6 text-center">
@@ -301,7 +301,7 @@
                 </div>
 
                 <!-- Wheel Area -->
-                <div class="relative w-64 h-64 mb-8">
+                <div class="relative w-56 h-56 md:w-64 md:h-64 mb-8">
                     <div id="wheel" class="wheel-circle w-full h-full border-4 relative">
                         <!-- Segments will be inserted here by JS -->
                     </div>
@@ -333,7 +333,7 @@
 
     <!-- Result Modal -->
     <div id="result-modal-overlay" class="modal-overlay hidden">
-        <div id="result-modal-content" class="modal-content p-6 w-11/12 max-w-md text-center">
+        <div id="result-modal-content" class="modal-content p-6 w-11/12 max-w-sm md:max-w-md text-center">
             <h3 class="text-2xl font-bold text-yellow-800 mb-4">🎉 ဂုဏ်ယူပါတယ် 🎉</h3>
             <p id="modal-member-name" class="text-lg font-semibold text-gray-700 mb-3"></p>
             <p class="text-gray-700">သင်ရရှိသောဆုမှာ:</p>
@@ -357,18 +357,18 @@
 
     <script type="module">
 
-        // --- Firebase Globals & Setup ---
+        // --- Firebase Globals & Setup (Using user's provided hardcoded config) ---
         const firebaseConfig = {
-            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-            appId: import.meta.env.VITE_FIREBASE_APP_ID,
-            measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+            apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw",
+            authDomain: "kmtechspaceship.firebaseapp.com",
+            projectId: "kmtechspaceship",
+            storageBucket: "kmtechspaceship.firebasestorage.app",
+            messagingSenderId: "494150534835",
+            appId: "1:494150534835:web:d2b654e04d7b52ca1912c6",
+            measurementId: "G-CWJ6BXN5TY"
         };
 
-        const appIdForPath = firebaseConfig.projectId; 
+        const appIdForPath = firebaseConfig.projectId;
         // FIX: New Collection Name for a clean slate
         const GAME_COLLECTION_NAME = 'thadingyut_money_pocket';
         const GAME_DOC_PATH = `artifacts/${appIdForPath}/public/data/${GAME_COLLECTION_NAME}/config`;
@@ -377,6 +377,8 @@
         let db, auth;
         let userId = null;
         let gameData = null;
+
+
 
 
         // --- Theme Definitions ---
@@ -487,6 +489,7 @@
                     auth = firebase.getAuth(app);
                     firebase.setLogLevel('error');
 
+                    // Sign in anonymously for access based on the security rules
                     await firebase.signInAnonymously(auth);
                     userId = auth.currentUser.uid;
 
@@ -1037,6 +1040,7 @@
                 loginErrorEl.classList.remove('hidden');
             }
         }
+
 
         function updateAdminPanelForms() {
             appTitleInputEl.value = gameData.appTitle;
