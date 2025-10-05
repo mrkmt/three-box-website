@@ -9,20 +9,20 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDKs -->
+    <!-- Firebase & Tone.js SDKs -->
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.9.15/build/Tone.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Expose Firebase objects globally for use in the main script block
         window.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot, setLogLevel };
     </script>
     
-    <!-- Chosen Palette: Festive Gold/Red with Clean Neutrals -->
-    <!-- Application Structure Plan: Three main views controlled by JS state: 1. Admin Panel (Secured Login/Config/Results Table). 2. Loading/Setup Screen. 3. Public Game View (Member Selection / Wheel Spin). Uses Firestore for shared state management of the game parameters, available prizes, and individual member spin results. The wheel segments are dynamically generated based on available (unallocated) prizes/colors. -->
-    <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing colors only. Admin Results Table (HTML/Tailwind) showing all hidden data. Interaction: Secure login to admin panel. Member selection to identify the spinner. Atomic update to Firestore on successful spin. Admin Reset button for individual member corrections. Justification: Firestore is necessary for multi-user state persistence and real-time result tracking. Hiding the amount on the wheel meets the user's secrecy requirement. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling. -->
+    <!-- Chosen Palette: Dynamic based on theme (Festive, Modern, Minimal) -->
+    <!-- Application Structure Plan: Three main views controlled by JS state: 1. Admin Panel (Secured Login/Config/Results Table). 2. Loading/Setup Screen. 3. Public Game View (Member Selection / Wheel Spin). Added dynamic app title configuration for generalization. Changed the result message to a Burmese blessing. Implemented sound effects via Tone.js and dynamic theming via JS. PNG download uses Canvas to render the result card. Prize amounts are auto-calculated randomly to ensure the total sum matches the budget, respecting min/max constraints and dynamic member/prize count. -->
+    <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts, enhanced engagement, and customization. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing dynamic theme colors. Admin Results Table (HTML/Tailwind) showing all hidden data. Interaction: Sound effects for spin/result. Admin theme and title selection. PNG download of the result. Justification: Tone.js provides robust, single-file sound integration. Dynamic theme/title adds customization and reusability. Canvas rendering allows the user to save their personalized result card. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling, Tone.js for audio, Canvas for PNG download. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -34,7 +34,7 @@
             to { transform: rotate(1080deg); } 
         }
         .spinning {
-            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Ease-in-out for realistic spin */
+            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
         }
         .wheel-circle {
             transition: transform 3s ease-out;
@@ -51,7 +51,7 @@
             height: 100%;
             z-index: 10;
             pointer-events: none;
-            box-shadow: 0 0 0 10px #FBBF24;
+            box-shadow: 0 0 0 10px var(--wheel-border-color, #FBBF24); 
             border-radius: 50%;
         }
         .wheel-segment {
@@ -64,14 +64,14 @@
         }
         .wheel-pointer {
             position: absolute;
-            top: -15px; /* Adjust based on pointer size */
+            top: -15px; 
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
-            border-bottom: 20px solid #D946EF; /* Purple pointer for visibility */
+            border-bottom: 20px solid var(--pointer-color, #D946EF); 
             z-index: 20;
         }
     </style>
@@ -81,8 +81,8 @@
     <div class="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
 
         <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-yellow-900">🏮 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🏮</h1>
-            <p class="text-gray-600 mt-2">Testing Team အတွက် တစ်ဦးချင်းဆုမဲစနစ်</p>
+            <h1 id="main-title" class="text-3xl md:text-4xl font-bold text-yellow-900">🏮 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🏮</h1>
+            <p id="main-subtitle" class="text-gray-600 mt-2">Testing Team အတွက် တစ်ဦးချင်းဆုမဲစနစ်</p>
         </header>
 
         <main class="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[500px] relative">
@@ -90,7 +90,7 @@
             <!-- Admin Controls Button -->
             <div class="mb-6 text-center">
                 <button id="admin-login-btn" class="text-sm text-red-700 hover:text-red-900 font-semibold underline">
-                    ⚙️ စီမံခန့်ခွဲမှု ဝင်ရောက်ရန်
+                    ⚙️ စီမံခန့်ခွဲမှု  ဝင်ရောက်ရန်
                 </button>
             </div>
 
@@ -126,6 +126,21 @@
                 
                 <form id="admin-form" class="space-y-4">
                     <h3 class="font-semibold text-lg text-green-700">၁. အခြေခံသတ်မှတ်ချက်များ</h3>
+                    
+                    <!-- New Title Input -->
+                    <div class="col-span-2">
+                        <label for="app-title-input" class="block text-sm font-medium text-gray-700">App ခေါင်းစဥ◌်/အဖွဲ့အမည်</label>
+                        <input type="text" id="app-title-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                    </div>
+                    
+                    <!-- Theme Selector -->
+                    <div class="col-span-2">
+                        <label for="app-theme-select" class="block text-sm font-medium text-gray-700">App Theme ရွေးချယ်ရန်</label>
+                        <select id="app-theme-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                            <!-- Options added by JS -->
+                        </select>
+                    </div>
+                    
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label for="total-amount" class="block text-sm font-medium text-gray-700">စုစုပေါင်းငွေပမာဏ (MMK)</label>
@@ -141,7 +156,7 @@
                         </div>
                         <div class="col-span-1">
                             <label class="block text-sm font-medium text-gray-700">လက်ရှိအဖွဲ့ဝင်ဦးရေ</label>
-                            <p id="member-count" class="mt-1 text-2xl font-bold text-green-700 p-2"></p>
+                            <p id="member-count" class="mt-1 text-2xl font-bold text-green-700 p-2">9</p>
                         </div>
                     </div>
                     <div>
@@ -149,10 +164,18 @@
                         <textarea id="team-members" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required></textarea>
                     </div>
 
-                    <h3 class="font-semibold text-lg text-green-700 mt-6">၂. ဆုပမာဏ သတ်မှတ်ခြင်း (၉ မျိုး)</h3>
+                    <!-- Dynamic Prize Management Section -->
+                    <h3 class="font-semibold text-lg text-green-700 mt-6 flex justify-between items-center">
+                        <span>၂. ဆုပမာဏ သတ်မှတ်ခြင်း (<span id="prize-count-display">9</span> မျိုး)</span>
+                        <div class="space-x-2">
+                            <button type="button" id="add-prize-btn" class="text-xs bg-green-500 text-white p-1 rounded hover:bg-green-600 font-semibold">+ ဆုထည့်</button>
+                            <button type="button" id="remove-prize-btn" class="text-xs bg-red-500 text-white p-1 rounded hover:bg-red-600 font-semibold">- ဆုဖျက်</button>
+                        </div>
+                    </h3>
                     <div id="prize-setup-container" class="space-y-2">
                         <!-- Prize inputs generated by JS -->
                     </div>
+                    <p id="prize-sum-status" class="text-sm mt-2 text-center font-semibold text-green-600 hidden"></p>
                     
                     <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">💾 အချက်အလက်များ သိမ်းဆည်းရန်</button>
                     <p id="admin-message" class="text-sm mt-2 text-center font-semibold text-green-600 hidden"></p>
@@ -192,13 +215,13 @@
                 
                 <!-- Wheel Area -->
                 <div class="relative w-64 h-64 mb-8">
-                    <div id="wheel" class="wheel-circle w-full h-full border-4 border-yellow-700 relative">
+                    <div id="wheel" class="wheel-circle w-full h-full border-4 relative">
                         <!-- Segments will be inserted here by JS -->
                     </div>
                     <div class="wheel-pointer"></div>
                 </div>
 
-                <button id="generate-btn" class="w-full max-w-xs bg-red-600 text-white font-bold py-4 px-4 rounded-full text-xl hover:bg-red-700 transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300" disabled>
+                <button id="generate-btn" class="w-full max-w-xs font-bold py-4 px-4 rounded-full text-xl transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4" disabled>
                     💰 လှည့်မည်
                 </button>
                 <p id="spin-status" class="mt-4 text-center text-sm text-gray-600 h-6"></p>
@@ -208,7 +231,10 @@
                     <div class="font-bold text-xl text-yellow-900 mb-2">ရလဒ်</div>
                     <p class="text-gray-700">သင်ရရှိသောဆုမှာ:</p>
                     <div id="result-color-display" class="font-extrabold text-2xl mt-1 p-2 rounded-lg text-white shadow-md"></div>
-                    <p class="text-sm text-gray-500 mt-2">(ငွေပမာဏကို Admin Panel တွင် သိမ်းဆည်းထားပါသည်)</p>
+                    <p id="result-wish" class="text-sm text-gray-500 mt-2">ဒီဆုပမာဏလေးက သင့်အတွက် ကံကောင်းခြင်းတွေ ယူဆောင်လာပါစေ။</p>
+                    <button id="download-result-btn" class="mt-4 bg-emerald-500 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors">
+                        ⬇️ ရလဒ်ပုံကို Download ဆွဲမည်
+                    </button>
                 </div>
 
                 <div id="reset-info" class="mt-6 p-4 bg-gray-100 rounded-lg text-sm text-gray-600 hidden w-full max-w-xs text-center">
@@ -230,7 +256,6 @@
         const ADMIN_PASSWORD = 'Thadingyut2025';
         
         // --- Firebase Globals & Setup ---
-        // ဤသည်မှာ သင့်၏ Firestore Configuration ဖြစ်သည်
         const firebaseConfig = {
             apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw",
             authDomain: "kmtechspaceship.firebaseapp.com",
@@ -241,40 +266,61 @@
             measurementId: "G-CWJ6BXN5TY"
         };
         
-        // Netlify/GitHub Deployment အတွက် Canvas placeholders များကို ဖယ်ရှားလိုက်သည်။
-        const appIdForPath = firebaseConfig.projectId; // Firestore path အတွက် Project ID (kmtechspaceship) ကို အသုံးပြုသည်။
-        const initialAuthToken = null; // Netlify တွင် Custom Auth Token မရှိပါ
+        const appIdForPath = firebaseConfig.projectId; 
+        const initialAuthToken = null; 
 
         let db, auth;
         let userId = null;
         let gameData = null;
 
-        // Firestore Path (Project ID ကို အသုံးပြုထားပါသည်)
         const GAME_DOC_PATH = `artifacts/${appIdForPath}/public/data/thadingyut_game/config`;
 
 
+        // --- Theme Definitions ---
+        const THEMES = {
+            'festive': {
+                name: '🏮 သီတင်းကျွတ်ရွှင်လန်း',
+                pointerColor: '#D946EF', // Purple
+                borderColor: '#FBBF24', // Gold
+                buttonClasses: 'bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300',
+            },
+            'modern': {
+                name: '✨ ခေတ်မီအေးဆေး',
+                pointerColor: '#3B82F6', // Blue
+                borderColor: '#9CA3AF', // Gray
+                buttonClasses: 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300',
+            },
+            'minimal': {
+                name: '⚪ ရိုးရှင်းဖြူစင်',
+                pointerColor: '#1F2937', // Dark Gray
+                borderColor: '#000000', // Black
+                buttonClasses: 'bg-gray-800 hover:bg-gray-700 focus:ring-4 focus:ring-gray-300',
+            }
+        };
+
         // --- Default Data ---
         const defaultData = {
+            appTitle: 'Testing Team', // New default title
             totalAmount: 30000,
             minAmount: 3000,
             maxAmount: 7000,
+            theme: 'festive',
             teamMembers: [
                 "sis TTM", "sis TWN", "sis NHHM", "sis EMT", "bro YHA",
                 "sis LLO", "sis PDL", "sis ZMO", "bro KMT"
             ].join('\n')
         };
 
-        // Default Prize Configuration (9 unique amounts that sum to 30000)
         const DEFAULT_PRIZES = [
-            { colorName: "ရွှေရောင်", hex: "#FFD700", amount: 7000, allocated: false },
-            { colorName: "ပတ္တမြားနီ", hex: "#D81B60", amount: 6000, allocated: false },
-            { colorName: "ကြေးနီရောင်", hex: "#CD7F32", amount: 4500, allocated: false },
-            { colorName: "မြရောင်", hex: "#00A86B", amount: 3000, allocated: false },
-            { colorName: "နီလာပြာ", hex: "#4169E1", amount: 3500, allocated: false },
-            { colorName: "ငွေရောင်", hex: "#C0C0C0", amount: 2500, allocated: false },
-            { colorName: "လိမ္မော်ရောင်", hex: "#FF8C00", amount: 1500, allocated: false },
-            { colorName: "ရွက်စိမ်းရောင်", hex: "#8FBC8F", amount: 3000, allocated: false },
-            { colorName: "ခရမ်းရောင်", hex: "#8A2BE2", amount: 3500, allocated: false },
+            { colorName: "ရွှေရောင်", hex: "#FFD700", allocated: false },
+            { colorName: "ပတ္တမြားနီ", hex: "#D81B60", allocated: false },
+            { colorName: "ကြေးနီရောင်", hex: "#CD7F32", allocated: false },
+            { colorName: "မြရောင်", hex: "#00A86B", allocated: false },
+            { colorName: "နီလာပြာ", hex: "#4169E1", allocated: false },
+            { colorName: "ငွေရောင်", hex: "#C0C0C0", allocated: false },
+            { colorName: "လိမ္မော်ရောင်", hex: "#FF8C00", allocated: false },
+            { colorName: "ရွက်စိမ်းရောင်", hex: "#8FBC8F", allocated: false },
+            { colorName: "ခရမ်းရောင်", hex: "#8A2BE2", allocated: false },
         ];
 
 
@@ -290,7 +336,11 @@
         const loginErrorEl = document.getElementById('login-error');
         const adminMessageEl = document.getElementById('admin-message');
         const memberCountEl = document.getElementById('member-count');
+        const prizeCountDisplayEl = document.getElementById('prize-count-display');
         const prizeSetupContainerEl = document.getElementById('prize-setup-container');
+        const addPrizeBtn = document.getElementById('add-prize-btn');
+        const removePrizeBtn = document.getElementById('remove-prize-btn');
+        const prizeSumStatusEl = document.getElementById('prize-sum-status');
         const adminResultsTableEl = document.getElementById('admin-results-table');
         const spinnerSelectEl = document.getElementById('spinner-select');
         const wheelEl = document.getElementById('wheel');
@@ -298,7 +348,18 @@
         const spinStatusEl = document.getElementById('spin-status');
         const individualResultEl = document.getElementById('individual-result');
         const resultColorDisplayEl = document.getElementById('result-color-display');
+        const downloadResultBtn = document.getElementById('download-result-btn');
         const resetInfoEl = document.getElementById('reset-info');
+        const appThemeSelectEl = document.getElementById('app-theme-select');
+        const mainTitleEl = document.getElementById('main-title');
+        const mainSubtitleEl = document.getElementById('main-subtitle');
+        const appTitleInputEl = document.getElementById('app-title-input');
+        const resultWishEl = document.getElementById('result-wish'); // New DOM element
+
+        // --- Tone.js Globals ---
+        let spinnerSynth, resultSynth;
+        let spinnerLoop;
+        let audioContextStarted = false;
 
         // --- Core Functions ---
 
@@ -310,41 +371,83 @@
                     auth = firebase.getAuth(app);
                     firebase.setLogLevel('error'); 
 
-                    // Auth login
-                    if (initialAuthToken) {
-                        await firebase.signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        // Netlify/GitHub deployment requires anonymous sign-in 
-                        // to get request.auth != null for the security rules to work.
-                        await firebase.signInAnonymously(auth); 
-                    }
+                    await firebase.signInAnonymously(auth); 
                     userId = auth.currentUser.uid;
                     
-                    // Start listening to game state
                     setupGameListener();
+                    setupTone(); 
 
                 } else {
-                    // Fallback to show error if config is truly missing
                     console.error("Firebase configuration is missing or incomplete.");
                 }
             } catch (e) {
                 console.error("Firebase Initialization Error:", e);
-                // Hide loading screen but show a message
                 loadingScreenEl.classList.add('hidden');
                 gameViewEl.classList.remove('hidden'); 
                 spinStatusEl.textContent = `❌ စနစ်ချိတ်ဆက်မှု အမှား။ (${e.message || 'Error'})`;
             }
         }
         
+        function setupTone() {
+            if (typeof Tone === 'undefined') return;
+            try {
+                document.body.addEventListener('click', () => {
+                    if (Tone.context.state !== 'running') {
+                        Tone.start();
+                        audioContextStarted = true;
+                    }
+                }, { once: true });
+                
+                spinnerSynth = new Tone.NoiseSynth({
+                    noise: { type: "pink" },
+                    envelope: { attack: 0.01, decay: 0.05, sustain: 1, release: 0.01 }
+                }).toDestination();
+
+                resultSynth = new Tone.Synth({
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 1 }
+                }).toDestination();
+                
+                spinnerLoop = new Tone.Loop(time => {
+                    spinnerSynth.triggerAttackRelease("16n", time, 0.3); 
+                }, "16n").start(0);
+                Tone.Transport.stop(); 
+                
+            } catch(e) {
+                console.warn("Tone.js setup failed:", e);
+            }
+        }
+
+        function startSpinSound() {
+            if (audioContextStarted && typeof Tone !== 'undefined') {
+                Tone.Transport.start();
+            }
+        }
+
+        function stopSpinSound() {
+            if (typeof Tone !== 'undefined') {
+                Tone.Transport.stop();
+            }
+        }
+
+        function playResultSound() {
+            if (audioContextStarted && typeof Tone !== 'undefined') {
+                resultSynth.triggerAttackRelease("C5", "8n");
+                resultSynth.triggerAttackRelease("G5", "8n", "+0.1");
+            }
+        }
+
         function setupGameListener() {
             const docRef = firebase.doc(db, GAME_DOC_PATH);
 
             firebase.onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     gameData = docSnap.data();
+                    // Ensure new fields exist on old data
+                    if (gameData.appTitle === undefined) gameData.appTitle = defaultData.appTitle;
+                    if (gameData.theme === undefined) gameData.theme = defaultData.theme;
                     renderGameUI();
                 } else {
-                    // Initialize default data if not exists
                     initializeDefaultGame();
                 }
             }, (error) => {
@@ -362,12 +465,16 @@
                 spinnerId: null
             }));
 
+            const initialPrizes = calculateRandomPrizes(DEFAULT_PRIZES.slice(0, members.length), defaultData.totalAmount, defaultData.minAmount, defaultData.maxAmount);
+
             const initialData = {
-                totalAmount: 30000,
-                minAmount: 3000,
-                maxAmount: 7000,
+                appTitle: defaultData.appTitle,
+                totalAmount: defaultData.totalAmount,
+                minAmount: defaultData.minAmount,
+                maxAmount: defaultData.maxAmount,
+                theme: defaultData.theme,
                 teamMembers: initialMembers,
-                prizes: DEFAULT_PRIZES,
+                prizes: initialPrizes,
                 lastUpdated: new Date().toISOString()
             };
 
@@ -381,28 +488,46 @@
 
         function renderGameUI() {
             if (!gameData) return;
+            
+            updateHeaderAndWish(); // Update titles and the wish message
+            applyTheme(gameData.theme);
 
-            // 1. Hide loading and show game view
             loadingScreenEl.classList.add('hidden');
             gameViewEl.classList.remove('hidden');
 
-            // 2. Render Wheel
             renderWheel();
-            
-            // 3. Render Spinner Selection & Check Status
             renderSpinnerSelection();
 
-            // 4. Update Admin Panel if visible
             if (!adminPanelEl.classList.contains('hidden')) {
                 updateAdminPanelForms();
                 renderAdminResultsTable();
             }
         }
         
+        function updateHeaderAndWish() {
+            const title = gameData.appTitle || 'မုန့်ဖိုးဝေစနစ်';
+            mainTitleEl.innerHTML = `🏮 ${title} 🏮`;
+            mainSubtitleEl.textContent = `အဖွဲ့၀◌င်များအတွက် တစ်ဦးချင်းဆုမဲစနစ်`;
+            resultWishEl.textContent = 'ဒီဆုပမာဏလေးက သင့်အတွက် ကံကောင်းခြင်းတွေ ယူဆောင်လာပါစေ။';
+        }
+        
+        function applyTheme(themeName) {
+            const theme = THEMES[themeName] || THEMES['festive'];
+            const root = document.documentElement;
+            
+            root.style.setProperty('--pointer-color', theme.pointerColor);
+            root.style.setProperty('--wheel-border-color', theme.borderColor);
+            
+            generateBtn.className = `w-full max-w-xs font-bold py-4 px-4 rounded-full text-xl transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none ${theme.buttonClasses}`;
+            generateBtn.classList.add('text-white'); 
+        
+            wheelEl.style.borderColor = theme.borderColor;
+        }
+
         function renderWheel() {
             const prizes = gameData.prizes.filter(p => !p.allocated);
             const numSegments = prizes.length;
-            wheelEl.innerHTML = ''; // Clear existing segments
+            wheelEl.innerHTML = ''; 
 
             if (numSegments === 0) {
                  wheelEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-center text-red-600 font-bold p-4 bg-gray-200/90 rounded-full">ဆုအားလုံး ပြီးဆုံးသွားပါပြီ။</div>';
@@ -417,7 +542,6 @@
                 segment.style.backgroundColor = prize.hex;
                 segment.style.transform = `rotate(${index * anglePerSegment}deg) skewY(-${90 - anglePerSegment}deg)`;
                 
-                // Add color name overlay (optional, but good for context)
                 const innerSegment = document.createElement('div');
                 innerSegment.className = 'absolute top-0 left-0 w-full h-full';
                 innerSegment.style.transform = `skewY(${90 - anglePerSegment}deg) rotate(0deg)`;
@@ -439,12 +563,9 @@
             spinnerSelectEl.innerHTML = '<option value="" disabled selected>--- ရွေးချယ်ပါ ---</option>';
             generateBtn.disabled = true;
             individualResultEl.classList.add('hidden');
+            downloadResultBtn.classList.add('hidden'); 
             resetInfoEl.classList.add('hidden');
             
-            let selectedMember = null;
-            let firstUnspunName = null;
-            
-            // Find the first unspun member to auto-select
             members.forEach(member => {
                 const option = document.createElement('option');
                 option.value = member.name;
@@ -452,29 +573,20 @@
                 if (member.spun) {
                     option.textContent += ' (လှည့်ပြီး)';
                     option.disabled = true;
-                } else if (!firstUnspunName) {
-                    firstUnspunName = member.name;
                 }
                 spinnerSelectEl.appendChild(option);
             });
             
-            // Auto-select and setup initial state
-            if (firstUnspunName) {
-                spinnerSelectEl.value = firstUnspunName;
-                selectedMember = members.find(m => m.name === firstUnspunName);
-                if (selectedMember && !selectedMember.spun) {
-                    generateBtn.disabled = false;
-                    spinStatusEl.textContent = `${selectedMember.name} အသင့်ဖြစ်ပါပြီ။`;
-                }
-            } else if (members.every(m => m.spun)) {
-                 generateBtn.disabled = true;
+            if (members.every(m => m.spun)) {
                  spinStatusEl.textContent = "ဂိမ်းပြီးဆုံးပါပြီ။";
                  resetInfoEl.classList.remove('hidden');
+            } else {
+                 spinStatusEl.textContent = "လှည့်မည့်သူကို ရွေးချယ်ပါ။"; 
             }
             
             spinnerSelectEl.onchange = function() {
                 const name = spinnerSelectEl.value;
-                selectedMember = members.find(m => m.name === name);
+                const selectedMember = members.find(m => m.name === name);
 
                 if (selectedMember && !selectedMember.spun) {
                     generateBtn.disabled = false;
@@ -486,13 +598,11 @@
                     displayIndividualResult(selectedMember);
                 } else {
                     generateBtn.disabled = true;
-                    spinStatusEl.textContent = "";
+                    spinStatusEl.textContent = "လှည့်မည့်သူကို ရွေးချယ်ပါ။";
                 }
             };
         }
 
-        // --- Spin Logic ---
-        
         async function handleSpin() {
             const selectedName = spinnerSelectEl.value;
             if (!selectedName || generateBtn.disabled) return;
@@ -508,37 +618,37 @@
                 return;
             }
 
-            // 1. Select a random prize and find the angle
             const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
             const selectedPrize = availablePrizes[prizeIndex];
             
             const allPrizes = gameData.prizes.filter(p => !p.allocated);
-            const targetPrizeIndex = allPrizes.findIndex(p => p.colorName === selectedPrize.colorName); // Index in the current, smaller wheel
+            const targetPrizeIndex = allPrizes.findIndex(p => p.colorName === selectedPrize.colorName); 
             
             const numSegments = allPrizes.length; 
             const anglePerSegment = 360 / numSegments;
             
-            // Calculate a random target rotation angle
             const baseRotations = 360 * 10; 
-            const targetAngle = targetPrizeIndex * anglePerSegment + (anglePerSegment / 2); // Center of the segment
-            const offset = Math.random() * (anglePerSegment * 0.8) - (anglePerSegment * 0.4); // Small random offset within the segment
+            const targetAngle = targetPrizeIndex * anglePerSegment + (anglePerSegment / 2); 
+            const offset = Math.random() * (anglePerSegment * 0.8) - (anglePerSegment * 0.4); 
             const finalRotation = baseRotations + targetAngle + offset;
             
-            // 2. Start the visual spin animation
             generateBtn.disabled = true;
             generateBtn.textContent = '🔄 လှည့်နေသည်...';
             spinStatusEl.textContent = "ဆုမဲကို ရွေးချယ်နေပါသည်...";
             wheelEl.style.transition = 'transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             wheelEl.style.transform = `rotate(${finalRotation}deg)`;
+            
+            startSpinSound(); 
 
-            // 3. Wait for the spin animation to finish (3 seconds)
             setTimeout(async () => {
+                stopSpinSound(); 
+                playResultSound(); 
+
                 spinStatusEl.textContent = "✅ ရလဒ်ထွက်ပေါ်ပါပြီ။";
                 
                 try {
                     const docRef = firebase.doc(db, GAME_DOC_PATH);
                     
-                    // Prepare atomic updates
                     const newMembers = gameData.teamMembers.map((m, i) => {
                         if (i === currentMemberIndex) {
                             return { 
@@ -571,17 +681,81 @@
                 } catch (error) {
                     console.error("Firestore Update Error:", error);
                     spinStatusEl.textContent = "❌ ရလဒ်သိမ်းဆည်းရာတွင် အမှားဖြစ်ပွားပါသည်။";
-                    // Re-enable button on error
                     generateBtn.disabled = false;
                     generateBtn.textContent = '💰 လှည့်မည်';
                 }
-            }, 3500); // 3.5 seconds to ensure animation completes
+            }, 3500); 
         }
         
         function displayIndividualResult(member) {
             resultColorDisplayEl.textContent = member.resultColor;
-            resultColorDisplayEl.style.backgroundColor = gameData.prizes.find(p => p.colorName === member.resultColor)?.hex || '#ccc';
+            const prize = gameData.prizes.find(p => p.colorName === member.resultColor);
+            const colorHex = prize?.hex || '#ccc';
+
+            resultColorDisplayEl.style.backgroundColor = colorHex;
             individualResultEl.classList.remove('hidden');
+            downloadResultBtn.classList.remove('hidden'); 
+            downloadResultBtn.onclick = () => downloadResultAsPNG(member.name, member.resultColor, colorHex);
+        }
+
+        // --- PNG Download Logic ---
+        function downloadResultAsPNG(memberName, resultColor, colorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 250;
+            const ctx = canvas.getContext('2d');
+            
+            const padaukFont = 'Padauk, sans-serif';
+            const appTitle = gameData.appTitle || 'မုန့်ဖိုးဝေစနစ်';
+
+            // 1. Background (Light Yellow/Gold)
+            ctx.fillStyle = '#FFFBEB'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Border/Accent
+            ctx.strokeStyle = THEMES[gameData.theme].borderColor || '#FBBF24'; 
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+            // 3. Text Styling (Title)
+            ctx.fillStyle = '#4B5563'; 
+            ctx.font = `20px ${padaukFont}`; 
+            ctx.textAlign = 'center';
+            ctx.fillText(`🎉 ${appTitle} 🎉`, canvas.width / 2, 40);
+
+            // 4. Congratulations
+            ctx.fillStyle = '#1F2937'; 
+            ctx.font = `24px ${padaukFont}`; 
+            ctx.fillText(`ဂုဏ်ယူပါတယ်, ${memberName}`, canvas.width / 2, 85);
+            
+            // 5. Color Display Box
+            ctx.fillStyle = colorHex;
+            ctx.fillRect(50, 100, canvas.width - 100, 50);
+            
+            // Draw contrast text on the color box
+            const contrastColor = getContrastColor(rgbToHex(colorHex));
+            ctx.fillStyle = contrastColor; 
+            ctx.font = `30px ${padaukFont}`; 
+            ctx.fillText(resultColor, canvas.width / 2, 137);
+
+            // 6. Wish/Context (Updated)
+            ctx.fillStyle = '#6B7280'; 
+            ctx.font = `14px ${padaukFont}`; 
+            ctx.fillText('ဒီဆုပမာဏလေးက သင့်အတွက် ကံကောင်းခြင်းတွေ ယူဆောင်လာပါစေ။', canvas.width / 2, 185);
+            
+            // 7. Footer
+            ctx.font = `16px ${padaukFont}`; 
+            ctx.fillStyle = '#059669'; 
+            ctx.fillText('🎁 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🎁', canvas.width / 2, 225);
+
+            // 8. Trigger Download
+            const dataURL = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = `Thadingyut_Prize_${memberName.replace(/\s/g, '_')}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         // --- Admin Panel Functions ---
@@ -597,77 +771,214 @@
                 loginErrorEl.classList.add('hidden');
                 updateAdminPanelForms();
                 renderAdminResultsTable();
+                calculateAndDisplayPrizeSum();
             } else {
                 loginErrorEl.classList.remove('hidden');
             }
         }
         
         function updateAdminPanelForms() {
+            appTitleInputEl.value = gameData.appTitle; // Load app title
             document.getElementById('total-amount').value = gameData.totalAmount;
             document.getElementById('min-amount').value = gameData.minAmount;
             document.getElementById('max-amount').value = gameData.maxAmount;
-            memberCountEl.textContent = gameData.teamMembers.length;
             
-            // Reconstruct team member list for textarea
-            document.getElementById('team-members').value = gameData.teamMembers.map(m => m.name).join('\n');
+            // Populate Theme Select
+            appThemeSelectEl.innerHTML = '';
+            Object.keys(THEMES).forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = THEMES[key].name;
+                if (key === gameData.theme) {
+                    option.selected = true;
+                }
+                appThemeSelectEl.appendChild(option);
+            });
+            appThemeSelectEl.onchange = handlePrizeInput;
+
+            const membersArray = gameData.teamMembers.map(m => m.name);
+            memberCountEl.textContent = membersArray.length; 
             
-            // Render prize setup inputs
+            document.getElementById('team-members').value = membersArray.join('\n');
+            
             renderPrizeSetupForms();
+            calculateAndDisplayPrizeSum();
+        }
+
+        function calculateRandomPrizes(prizes, T, min, max) {
+            T = parseInt(T) || 0;
+            min = parseInt(min) || 0;
+            max = parseInt(max) || 0;
+            const N = prizes.length;
+            
+            if (N === 0) return [];
+            
+            const T_min = N * min;
+            const T_max = N * max;
+
+            if (T < T_min) T = T_min;
+            if (T > T_max) T = T_max;
+            if (min > max) max = min;
+            
+            const prizesCopy = [...prizes];
+            let amounts = Array(N).fill(min);
+            let remaining = T - T_min;
+            
+            for (let i = 0; i < N && remaining > 0; i++) {
+                const extraCap = max - amounts[i];
+                const maxAllocatable = Math.min(remaining, extraCap);
+                
+                let randomExtra = 0;
+                if (maxAllocatable > 0) {
+                    randomExtra = Math.floor(Math.random() * (maxAllocatable * 0.5 + 1));
+                }
+                
+                amounts[i] += randomExtra;
+                remaining -= randomExtra;
+            }
+
+            for (let i = 0; remaining > 0 && i < 100; i++) { 
+                for (let j = 0; j < N && remaining > 0; j++) {
+                    if (amounts[j] < max) {
+                        amounts[j]++;
+                        remaining--;
+                    }
+                }
+            }
+            
+            return prizesCopy.map((prize, index) => ({
+                ...prize,
+                amount: amounts[index] || min
+            }));
         }
 
         function renderPrizeSetupForms() {
             prizeSetupContainerEl.innerHTML = '';
+            
+            const prizeCount = gameData.prizes.length;
+            prizeCountDisplayEl.textContent = prizeCount;
+
+            gameData.prizes = calculateRandomPrizes(
+                gameData.prizes, 
+                document.getElementById('total-amount').value, 
+                document.getElementById('min-amount').value, 
+                document.getElementById('max-amount').value
+            );
+
             gameData.prizes.forEach((prize, index) => {
                 const div = document.createElement('div');
-                div.className = 'grid grid-cols-5 gap-2 items-center';
+                div.className = 'grid grid-cols-5 gap-2 items-center prize-input-row';
+                div.setAttribute('data-index', index);
                 
                 const colorInput = `<input type="color" data-index="${index}" class="col-span-1 w-full h-8 rounded-md" value="${prize.hex}">`;
                 const nameInput = `<input type="text" data-index="${index}" data-field="colorName" placeholder="အရောင်အမည်" class="col-span-2 p-1 text-sm rounded-md" value="${prize.colorName}">`;
-                const amountInput = `<input type="number" data-index="${index}" data-field="amount" placeholder="ပမာဏ MMK" class="col-span-2 p-1 text-sm rounded-md" value="${prize.amount}" min="100">`;
+                const amountInput = `<input type="number" data-index="${index}" data-field="amount" placeholder="ပမာဏ MMK" class="col-span-2 p-1 text-sm rounded-md bg-gray-200 text-red-700 font-bold" value="${prize.amount}" readonly>`;
 
                 div.innerHTML = `${colorInput}${nameInput}${amountInput}`;
                 prizeSetupContainerEl.appendChild(div);
             });
             
-            // Add listeners for color/amount changes (to update temp data)
-            prizeSetupContainerEl.querySelectorAll('input').forEach(input => {
-                input.addEventListener('input', () => {
-                    const index = parseInt(input.getAttribute('data-index'));
-                    const field = input.getAttribute('data-field');
-
-                    // Check if index is valid and update temp gameData object
-                    if (index >= 0 && index < gameData.prizes.length) {
-                        if (input.type === 'color') {
-                            gameData.prizes[index].hex = input.value;
-                        } else if (field) {
-                             gameData.prizes[index][field] = field === 'amount' ? parseInt(input.value) : input.value;
-                        }
-                    }
-                    
-                    // Simple validation check
-                    const newMembersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
-                    
-                    if (newMembersCount !== gameData.prizes.length) {
-                         adminMessageEl.textContent = `သတိ! အဖွဲ့ဝင်ဦးရေ (${newMembersCount}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ဆုများကို ၉ ခုတိတိ ပြင်ဆင်ပါ။`;
-                         adminMessageEl.classList.remove('hidden');
-                         adminMessageEl.classList.add('text-red-600');
-                    } else {
-                         adminMessageEl.classList.add('hidden');
-                    }
-                });
+            prizeSetupContainerEl.querySelectorAll('input[type="color"], input[type="text"]').forEach(input => {
+                input.addEventListener('input', handlePrizeInput);
             });
         }
         
-        // --- Function to reset a specific member's spin ---
+        function calculateAndDisplayPrizeSum() {
+            const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
+            const totalBudget = parseInt(document.getElementById('total-amount').value) || gameData.totalAmount;
+
+            prizeSumStatusEl.textContent = `ဆုပမာဏ စုစုပေါင်း: ${prizeSum.toLocaleString()} MMK (ဘတ်ဂျက်: ${totalBudget.toLocaleString()} MMK)`;
+            prizeSumStatusEl.classList.remove('hidden');
+
+            if (prizeSum === totalBudget) {
+                prizeSumStatusEl.classList.remove('text-red-600');
+                prizeSumStatusEl.classList.add('text-green-600');
+            } else {
+                prizeSumStatusEl.classList.remove('text-green-600');
+                prizeSumStatusEl.classList.add('text-red-600');
+            }
+        }
+        
+        function handlePrizeInput(event) {
+            const input = event.target;
+            const index = parseInt(input.getAttribute('data-index'));
+            const field = input.getAttribute('data-field');
+
+            if (index >= 0 && index < gameData.prizes.length) {
+                if (input.type === 'color') {
+                    gameData.prizes[index].hex = input.value;
+                } else if (field) {
+                     gameData.prizes[index][field] = input.value;
+                }
+            }
+            
+            const newMembersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
+            memberCountEl.textContent = newMembersCount; 
+            
+            if (newMembersCount !== gameData.prizes.length) {
+                 adminMessageEl.textContent = `သတိ! အဖွဲ့ဝင်ဦးရေ (${newMembersCount}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ၎င်းတို့သည် တူညီနေရပါမည်။`;
+                 adminMessageEl.classList.remove('hidden', 'text-green-600');
+                 adminMessageEl.classList.add('text-red-600');
+            } else {
+                 adminMessageEl.classList.add('hidden');
+            }
+            
+            const changedInputId = event.target.id;
+            if (['total-amount', 'min-amount', 'max-amount', 'app-title-input', 'app-theme-select'].includes(changedInputId)) {
+                // If core parameters change, re-render and recalculate prizes
+                renderPrizeSetupForms(); 
+            }
+            
+            calculateAndDisplayPrizeSum();
+        }
+        
+        function addPrizeField() {
+            const membersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
+
+            if (gameData.prizes.length >= membersCount) {
+                const newMemberName = `Team Member ${gameData.prizes.length + 1}`;
+                document.getElementById('team-members').value += `\n${newMemberName}`;
+                memberCountEl.textContent = gameData.prizes.length + 1;
+            }
+            
+            const prizeCount = gameData.prizes.length;
+            const newPrize = { colorName: `ဆုအသစ် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
+            gameData.prizes.push(newPrize);
+            
+            renderPrizeSetupForms(); 
+            calculateAndDisplayPrizeSum();
+        }
+
+        function removeLastPrizeField() {
+            const membersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
+
+            if (gameData.prizes.length > 1) {
+                gameData.prizes.pop();
+            } else {
+                displayAdminMessage("❌ အနည်းဆုံး ဆု ၁ ခုတော့ ထားရှိရပါမည်။", 'red');
+                return;
+            }
+            
+            if (gameData.prizes.length < membersCount) {
+                const membersTextarea = document.getElementById('team-members');
+                const lines = membersTextarea.value.split('\n').filter(n => n.trim() !== '');
+                lines.pop(); 
+                membersTextarea.value = lines.join('\n');
+                memberCountEl.textContent = lines.length;
+            }
+
+            renderPrizeSetupForms(); 
+            calculateAndDisplayPrizeSum();
+        }
+
         async function resetMemberSpin(memberIndex) {
             if (!gameData || memberIndex < 0 || memberIndex >= gameData.teamMembers.length) return;
 
             const member = gameData.teamMembers[memberIndex];
-            if (!member.spun) return; // Only reset if they have spun
+            if (!member.spun) return; 
 
             const docRef = firebase.doc(db, GAME_DOC_PATH);
             
-            // 1. Unallocate the prize color
             const newPrizes = gameData.prizes.map(p => {
                 if (p.colorName === member.resultColor) {
                     return { ...p, allocated: false };
@@ -675,7 +986,6 @@
                 return p;
             });
 
-            // 2. Reset member's status
             const newMembers = gameData.teamMembers.map((m, i) => {
                 if (i === memberIndex) {
                     return { ...m, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
@@ -690,7 +1000,6 @@
                     prizes: newPrizes,
                     lastUpdated: new Date().toISOString()
                 });
-                // Success message will be displayed via the onSnapshot listener refresh
             } catch (e) {
                 console.error("Failed to reset member spin:", e);
                 displayAdminMessage(`❌ ${member.name} ၏ ရလဒ် ပြန်လည်သတ်မှတ်ရန် မအောင်မြင်ပါ။`, 'red');
@@ -715,7 +1024,6 @@
                     currentTotal += member.resultAmount;
                 }
                 
-                // Reset Button
                 const resetButton = document.createElement('button');
                 resetButton.className = 'text-xs py-1 px-2 rounded font-semibold transition-colors';
                 resetButton.setAttribute('data-index', index);
@@ -725,7 +1033,6 @@
                     resetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
                     resetButton.addEventListener('click', (e) => {
                         const idx = parseInt(e.target.getAttribute('data-index'));
-                        // IMPORTANT: Use standard confirmation dialog as custom modals are complex for this context
                         if (confirm(`သေချာပါသလား? ${gameData.teamMembers[idx].name} ရဲ့ ရလဒ်ကို ပြန်ဖျက်ပြီး ဆုကို ပြန်ထည့်ပေးပါမည်။`)) {
                             resetMemberSpin(idx);
                         }
@@ -747,11 +1054,10 @@
                     <td class="p-3 text-center text-sm">${colorDisplay}</td>
                     <td class="p-3 text-right font-mono font-bold text-red-700">${amountDisplay}</td>
                 `;
-                tr.appendChild(resetTd); // Append the reset button column
+                tr.appendChild(resetTd); 
                 adminResultsTableEl.appendChild(tr);
             });
 
-            // Summary row
             const totalRow = document.createElement('tr');
             totalRow.className = 'bg-green-200 font-bold';
             totalRow.innerHTML = `
@@ -767,55 +1073,53 @@
         async function handleAdminSave(event) {
             event.preventDefault();
 
+            const newTitle = appTitleInputEl.value;
             const newTotal = parseInt(document.getElementById('total-amount').value);
             const newMin = parseInt(document.getElementById('min-amount').value);
             const newMax = parseInt(document.getElementById('max-amount').value);
+            const newTheme = document.getElementById('app-theme-select').value;
             const newMembersText = document.getElementById('team-members').value;
             const membersArray = newMembersText.split('\n').filter(n => n.trim() !== '');
 
             const totalMinRequired = membersArray.length * newMin;
             const totalMaxRequired = membersArray.length * newMax;
             
-            // Validation 1: Min/Max/Total Check
+            const prizeCount = gameData.prizes.length;
+
+            if (membersArray.length !== prizeCount) {
+                displayAdminMessage(`❌ အဖွဲ့ဝင်ဦးရေ (${membersArray.length}) နှင့် ဆုဦးရေ (${prizeCount}) မတူညီပါ။ ၎င်းတို့သည် တူညီနေရပါမည်။`, 'red');
+                return;
+            }
+
             if (newTotal < totalMinRequired || newTotal > totalMaxRequired) {
                 displayAdminMessage(`❌ မမှန်ကန်ပါ။ စုစုပေါင်းငွေပမာဏသည် ${membersArray.length} ယောက်အတွက် ${totalMinRequired.toLocaleString()} MMK မှ ${totalMaxRequired.toLocaleString()} MMK အတွင်း ဖြစ်ရပါမည်။`, 'red');
                 return;
             }
             
-            // Validation 2: Prize Count Check
-            if (membersArray.length !== gameData.prizes.length) {
-                displayAdminMessage(`❌ အဖွဲ့ဝင်ဦးရေ (${membersArray.length}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ဆုများကို ၉ ခုတိတိ ပြင်ဆင်ပါ။`, 'red');
-                return;
-            }
-
-            // Validation 3: Prize Sum Check
             const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
             if (prizeSum !== newTotal) {
-                 displayAdminMessage(`❌ ဆုများ၏ စုစုပေါင်းပမာဏ (${prizeSum.toLocaleString()} MMK) သည် စုစုပေါင်းငွေ (${newTotal.toLocaleString()} MMK) နှင့် မတူညီပါ။`, 'red');
+                 displayAdminMessage(`❌ သိမ်းဆည်းရန် အမှား။ ဆုပမာဏ စုစုပေါင်း (${prizeSum.toLocaleString()} MMK) သည် စုစုပေါင်းငွေ (${newTotal.toLocaleString()} MMK) နှင့် မတူညီပါ။`, 'red');
                  return;
             }
 
-            // Map old members to new members, maintaining spun status if name is the same
-            const oldMembers = gameData.teamMembers;
             const updatedMembers = membersArray.map(name => {
-                const existing = oldMembers.find(m => m.name === name);
-                // Reset all status for new configuration to ensure a fresh game start
                 return { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
             });
             
-            // Create a new prize array based on current form values, resetting allocation status
             const newPrizes = gameData.prizes.map(p => ({
                 colorName: p.colorName,
                 hex: p.hex,
                 amount: parseInt(p.amount),
-                allocated: false // Reset allocation when new config is saved
+                allocated: false 
             }));
 
 
             const newData = {
+                appTitle: newTitle,
                 totalAmount: newTotal,
                 minAmount: newMin,
                 maxAmount: newMax,
+                theme: newTheme,
                 teamMembers: updatedMembers, 
                 prizes: newPrizes,
                 lastUpdated: new Date().toISOString()
@@ -842,7 +1146,7 @@
 
         function toggleLogin() {
             loginSectionEl.classList.toggle('hidden');
-            adminPanelEl.classList.add('hidden'); // Close admin panel if open
+            adminPanelEl.classList.add('hidden'); 
             loginErrorEl.classList.add('hidden');
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
@@ -852,19 +1156,24 @@
             adminPanelEl.classList.add('hidden');
             loginSectionEl.classList.add('hidden');
             adminMessageEl.classList.add('hidden');
-            // Re-render the wheel in case the user edited but didn't save
             renderGameUI(); 
         }
         
-        // --- Helper Function ---
         function getContrastColor(hex) {
-            // Simple check to determine if text should be black or white
             if (!hex || hex.indexOf('#') === -1) return '#000000';
             const r = parseInt(hex.substring(1, 3), 16);
             const g = parseInt(hex.substring(3, 5), 16);
             const b = parseInt(hex.substring(5, 7), 16);
             const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
             return (yiq >= 128) ? '#000000' : '#ffffff';
+        }
+        
+        function rgbToHex(rgb) {
+            if (!rgb || rgb.indexOf('rgb') === -1) return '#000000';
+            const components = rgb.match(/\d+/g);
+            if (!components || components.length < 3) return '#000000';
+            const hex = "#" + ((1 << 24) + (parseInt(components[0]) << 16) + (parseInt(components[1]) << 8) + parseInt(components[2])).toString(16).slice(1);
+            return hex.toUpperCase();
         }
 
         // --- Event Listeners and Initialization ---
@@ -875,6 +1184,34 @@
             adminForm.addEventListener('submit', handleAdminSave);
             adminLoginBtn.addEventListener('click', toggleLogin);
             closeAdminBtn.addEventListener('click', closeAdminPanel);
+            
+            addPrizeBtn.addEventListener('click', addPrizeField);
+            removePrizeBtn.addEventListener('click', removeLastPrizeField);
+            
+            document.getElementById('total-amount').addEventListener('input', handlePrizeInput);
+            document.getElementById('min-amount').addEventListener('input', handlePrizeInput);
+            document.getElementById('max-amount').addEventListener('input', handlePrizeInput);
+            appTitleInputEl.addEventListener('input', handlePrizeInput);
+            appThemeSelectEl.addEventListener('change', handlePrizeInput);
+            
+            document.getElementById('team-members').addEventListener('input', (event) => {
+                const newMembersCount = event.target.value.split('\n').filter(n => n.trim() !== '').length;
+                memberCountEl.textContent = newMembersCount;
+                
+                if (gameData) {
+                    while (gameData.prizes.length < newMembersCount) {
+                        const prizeCount = gameData.prizes.length;
+                        const newPrize = { colorName: `ဆုအသစ် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
+                        gameData.prizes.push(newPrize);
+                    }
+                    while (gameData.prizes.length > newMembersCount) {
+                        gameData.prizes.pop();
+                    }
+                    renderPrizeSetupForms(); 
+                }
+                
+                calculateAndDisplayPrizeSum();
+            });
         });
 
     </script>

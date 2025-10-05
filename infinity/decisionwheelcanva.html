@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Wheel - Spin to Choose!</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .input-section {
+            background: rgba(255,255,255,0.2);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .option-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .option-input input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            color: #333;
+        }
+
+        .option-input button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #28a745;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-input button:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .options-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .option-tag {
+            background: rgba(255,255,255,0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .remove-option {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 0 auto 30px;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #fff;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            transition: transform 4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .wheel-segment {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: 100% 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            border-right: 2px solid rgba(255,255,255,0.3);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .wheel-segment .segment-text {
+            font-weight: bold;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+            pointer-events: none;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #fff;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+            text-align: center;
+            z-index: 20;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.8);
+            border: 3px solid #ddd;
+        }
+
+        .spin-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .spin-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .spin-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-section {
+            background: rgba(255,255,255,0.2);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-top: 20px;
+            display: none;
+        }
+
+        .winner-announcement {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            animation: bounce 0.6s ease-in-out;
+        }
+
+        .winner-text {
+            font-size: 1.5rem;
+            background: rgba(255,255,255,0.3);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin: 15px 0;
+            word-wrap: break-word;
+        }
+
+        .preset-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.5);
+            transform: translateY(-1px);
+        }
+
+        .empty-wheel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #666;
+            background: #f8f9fa;
+            border: 3px dashed #ddd;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .wheel-container {
+                width: 300px;
+                height: 300px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .wheel-segment {
+                font-size: 12px;
+            }
+
+            .option-input {
+                flex-direction: column;
+            }
+
+            .option-input input {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Decision Wheel</h1>
+        <p class="subtitle">Add your options and spin to make a choice!</p>
+        
+        <div class="input-section">
+            <h3>📝 Add Your Options</h3>
+            <div class="option-input">
+                <input type="text" id="option-input" placeholder="Enter an option (e.g., 'Take a break', 'Get coffee')" maxlength="50">
+                <button id="add-option">Add Option</button>
+            </div>
+            
+            <div class="preset-options">
+                <button class="preset-btn" onclick="addPresetOptions('work')">Work Tasks</button>
+                <button class="preset-btn" onclick="addPresetOptions('food')">Food Choices</button>
+                <button class="preset-btn" onclick="addPresetOptions('activity')">Activities</button>
+                <button class="preset-btn" onclick="addPresetOptions('break')">Break Ideas</button>
+                <button class="preset-btn" onclick="clearAllOptions()">Clear All</button>
+            </div>
+            
+            <div class="options-list" id="options-list">
+                <!-- Options will be displayed here -->
+            </div>
+        </div>
+
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" id="wheel">
+                <div class="empty-wheel">
+                    Add options above to create your wheel!
+                </div>
+            </div>
+            <div class="wheel-center">
+                SPIN
+            </div>
+        </div>
+
+        <button class="spin-btn" id="spin-btn" disabled>🎯 SPIN THE WHEEL!</button>
+
+        <div class="result-section" id="result-section">
+            <div class="winner-announcement">🎉 Decision Made! 🎉</div>
+            <div class="winner-text" id="winner-text"></div>
+            <p>Ready for another spin? The wheel is waiting!</p>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let options = [];
+        let isSpinning = false;
+        let currentRotation = 0;
+
+        // Color palette for segments
+        const colors = [
+            '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', 
+            '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd',
+            '#26de81', '#fc5c65', '#fed330', '#fd79a8',
+            '#fdcb6e', '#6c5ce7', '#a29bfe', '#74b9ff'
+        ];
+
+        // Preset option sets
+        const presets = {
+            work: ['Work on project X', 'Take a break', 'Check emails', 'Plan tomorrow', 'Review documents', 'Team meeting'],
+            food: ['Pizza', 'Burger', 'Salad', 'Pasta', 'Sushi', 'Sandwich', 'Soup', 'Tacos'],
+            activity: ['Go for a walk', 'Read a book', 'Watch a movie', 'Exercise', 'Call a friend', 'Listen to music'],
+            break: ['Get coffee', '5-minute meditation', 'Stretch', 'Fresh air', 'Quick snack', 'Chat with colleague']
+        };
+
+        // DOM elements
+        const optionInput = document.getElementById('option-input');
+        const addOptionBtn = document.getElementById('add-option');
+        const optionsList = document.getElementById('options-list');
+        const wheel = document.getElementById('wheel');
+        const spinBtn = document.getElementById('spin-btn');
+        const resultSection = document.getElementById('result-section');
+        const winnerText = document.getElementById('winner-text');
+
+        // Sound effects using Web Audio API
+        function createSound(frequency, duration, type = 'sine') {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                oscillator.type = type;
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                // Fallback if audio context fails
+                console.log('Audio not available');
+            }
+        }
+
+        function playSpinSound() {
+            // Spinning sound effect
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    createSound(200 + Math.random() * 300, 0.1, 'sawtooth');
+                }, i * 80);
+            }
+        }
+
+        function playWinSound() {
+            // Victory sound effect
+            const notes = [523, 659, 784, 1047]; // C, E, G, C
+            notes.forEach((note, index) => {
+                setTimeout(() => {
+                    createSound(note, 0.4);
+                }, index * 150);
+            });
+        }
+
+        // Add option function
+        function addOption(optionText) {
+            const text = optionText.trim();
+            if (text && !options.includes(text) && options.length < 16) {
+                options.push(text);
+                updateOptionsDisplay();
+                updateWheel();
+                updateSpinButton();
+                return true;
+            }
+            return false;
+        }
+
+        // Remove option function
+        function removeOption(index) {
+            options.splice(index, 1);
+            updateOptionsDisplay();
+            updateWheel();
+            updateSpinButton();
+        }
+
+        // Update options display
+        function updateOptionsDisplay() {
+            optionsList.innerHTML = '';
+            
+            options.forEach((option, index) => {
+                const optionTag = document.createElement('div');
+                optionTag.className = 'option-tag';
+                optionTag.innerHTML = `
+                    <span>${option}</span>
+                    <button class="remove-option" onclick="removeOption(${index})">×</button>
+                `;
+                optionsList.appendChild(optionTag);
+            });
+        }
+
+        // Update wheel display
+        function updateWheel() {
+            wheel.innerHTML = '';
+            
+            if (options.length === 0) {
+                const emptyWheel = document.createElement('div');
+                emptyWheel.className = 'empty-wheel';
+                emptyWheel.textContent = 'Add options above to create your wheel!';
+                wheel.appendChild(emptyWheel);
+                return;
+            }
+
+            const segmentAngle = 360 / options.length;
+            
+            options.forEach((option, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'wheel-segment';
+                segment.style.backgroundColor = colors[index % colors.length];
+                segment.style.transform = `rotate(${index * segmentAngle}deg)`;
+                segment.style.clipPath = createSegmentPath(segmentAngle);
+                
+                const textElement = document.createElement('div');
+                textElement.className = 'segment-text';
+                textElement.textContent = option;
+                textElement.style.transform = `rotate(${segmentAngle / 2}deg) translateX(80px) rotate(-${segmentAngle / 2}deg)`;
+                textElement.style.position = 'absolute';
+                textElement.style.top = '50%';
+                textElement.style.left = '50%';
+                textElement.style.transformOrigin = '0 0';
+                
+                segment.appendChild(textElement);
+                wheel.appendChild(segment);
+            });
+        }
+
+        // Create segment clip path
+        function createSegmentPath(angle) {
+            const angleRad = (angle * Math.PI) / 180;
+            const x = Math.cos(angleRad) * 50;
+            const y = Math.sin(angleRad) * 50;
+            return `polygon(100% 100%, 100% 0%, ${50 + x}% ${50 + y}%)`;
+        }
+
+        // Update spin button state
+        function updateSpinButton() {
+            if (options.length >= 2) {
+                spinBtn.disabled = false;
+                spinBtn.textContent = '🎯 SPIN THE WHEEL!';
+            } else {
+                spinBtn.disabled = true;
+                spinBtn.textContent = options.length === 0 ? 'Add options first!' : 'Need at least 2 options!';
+            }
+        }
+
+        // Spin the wheel
+        function spinWheel() {
+            if (isSpinning || options.length < 2) return;
+            
+            isSpinning = true;
+            spinBtn.disabled = true;
+            resultSection.style.display = 'none';
+            
+            // Play spin sound
+            playSpinSound();
+            
+            // Calculate spin parameters
+            const spins = 5 + Math.random() * 5; // 5-10 full rotations
+            const segmentAngle = 360 / options.length;
+            const randomSegment = Math.floor(Math.random() * options.length);
+            const targetAngle = randomSegment * segmentAngle + (segmentAngle / 2);
+            const finalRotation = currentRotation + (spins * 360) + (360 - targetAngle);
+            
+            // Apply rotation
+            wheel.style.transform = `rotate(${finalRotation}deg)`;
+            currentRotation = finalRotation % 360;
+            
+            // Show result after animation
+            setTimeout(() => {
+                const winningOption = options[randomSegment];
+                winnerText.textContent = winningOption;
+                resultSection.style.display = 'block';
+                
+                // Play win sound
+                playWinSound();
+                
+                // Re-enable spin button
+                isSpinning = false;
+                updateSpinButton();
+            }, 4000);
+        }
+
+        // Add preset options
+        function addPresetOptions(presetKey) {
+            const presetOptions = presets[presetKey];
+            let addedCount = 0;
+            
+            presetOptions.forEach(option => {
+                if (addOption(option)) {
+                    addedCount++;
+                }
+            });
+            
+            if (addedCount > 0) {
+                optionInput.value = '';
+            }
+        }
+
+        // Clear all options
+        function clearAllOptions() {
+            if (options.length > 0 && confirm('Are you sure you want to clear all options?')) {
+                options = [];
+                updateOptionsDisplay();
+                updateWheel();
+                updateSpinButton();
+                resultSection.style.display = 'none';
+            }
+        }
+
+        // Event listeners
+        addOptionBtn.addEventListener('click', () => {
+            const text = optionInput.value;
+            if (addOption(text)) {
+                optionInput.value = '';
+            } else if (text.trim() && options.includes(text.trim())) {
+                alert('This option already exists!');
+            } else if (options.length >= 16) {
+                alert('Maximum 16 options allowed!');
+            }
+        });
+
+        optionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addOptionBtn.click();
+            }
+        });
+
+        spinBtn.addEventListener('click', spinWheel);
+
+        // Make functions global for onclick handlers
+        window.removeOption = removeOption;
+        window.addPresetOptions = addPresetOptions;
+        window.clearAllOptions = clearAllOptions;
+
+        // Initialize with some default options
+        addPresetOptions('work');
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'989bdca3817c5f03',t:'MTc1OTY1NjIyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
