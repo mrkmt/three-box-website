@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ်</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Gold Accent and Red for Action -->
+    <!-- Application Structure Plan: Three main interactive sections: 1. Main Spin Wheel (Public/Action View - NOW WITHOUT ANY PARAMETER DISPLAY). 2. Admin Login (Gatekeeper). 3. Admin Panel (Data Editing, Hidden by default). The public view is simplified to only the Wheel action to fully meet the user's request to hide all setup data. The admin panel remains the single source for viewing/editing parameters. -->
+    <!-- Visualization & Content Choices: Goal: Enable secure editing of parameters and team list while keeping the distribution interactive (Wheel) and hiding all configuration details from the main view. Viz/Presentation Method: Spin Wheel (CSS/JS animation) for the core action. Hidden Admin Panel (HTML Forms) for configuration. Results displayed in a responsive card grid. Interaction: Login form (Input check). Admin Form (CRUD-like update/save). Spin button (Trigger animation/logic). Justification: The core data is entirely hidden from public view, enhancing privacy as requested. Library/Method: Vanilla JavaScript for logic and authentication, CSS animations for the wheel effect, Tailwind CSS for all styling. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Padauk', sans-serif;
+            background-color: #FDFBF6;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(1080deg); } 
+        }
+        .spinning {
+            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Ease-in-out for realistic spin */
+        }
+        .wheel-circle {
+            background: conic-gradient(
+                #FBBF24 0deg 33.3%,
+                #FCD34D 33.3deg 66.6%,
+                #FBBF24 66.6deg 100%
+            );
+            transition: transform 3s ease-out;
+        }
+        .card-enter {
+            animation: card-enter 0.5s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes card-enter {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-yellow-900">🏮 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🏮</h1>
+            <p class="text-gray-600 mt-2">Testing Team အတွက် မုန့်ဖိုးဝေရန် မဲနှိုက်စနစ်</p>
+        </header>
+
+        <main class="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200">
+            
+            <!-- Admin Controls Button -->
+            <div class="mb-6 text-center">
+                <button id="admin-login-btn" class="text-sm text-red-700 hover:text-red-900 font-semibold underline">
+                    ⚙️ စီမံခန့်ခွဲမှု ဝင်ရောက်ရန်
+                </button>
+            </div>
+
+            <!-- Login Section (Hidden by default, shown when admin-login-btn is clicked) -->
+            <div id="login-section" class="mb-8 border border-red-300 p-4 rounded-xl bg-red-50 hidden">
+                <h2 class="text-lg font-bold text-red-800 border-b pb-2 mb-4">စီမံခန့်ခွဲသူ ဝင်ရောက်ခြင်း</h2>
+                <form id="login-form" class="space-y-3">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">အသုံးပြုသူအမည် (kmt)</label>
+                        <input type="text" id="username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">လျှို့ဝှက်နံပါတ်</label>
+                        <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                    </div>
+                    <button type="submit" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-colors">🔐 ဝင်ရောက်မည်</button>
+                    <p id="login-error" class="text-red-500 text-sm mt-2 text-center hidden">အသုံးပြုသူအမည် (သို့) လျှို့ဝှက်နံပါတ် မမှန်ကန်ပါ။</p>
+                </form>
+            </div>
+
+            <!-- Admin Panel (Hidden until successful login) -->
+            <div id="admin-panel" class="mb-8 relative border border-green-300 p-4 rounded-xl bg-green-50 hidden">
+                <h2 class="text-lg font-bold text-green-800 border-b pb-2 mb-4">✅ မုန့်ဖိုးခွဲဝေမှု စီမံခန့်ခွဲရန်</h2>
+                <button id="close-admin-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-xl font-bold p-1">×</button>
+                <form id="admin-form" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="total-amount" class="block text-sm font-medium text-gray-700">စုစုပေါင်းငွေပမာဏ (MMK)</label>
+                            <input type="number" id="total-amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="1000" required>
+                        </div>
+                        <div>
+                            <label for="min-amount" class="block text-sm font-medium text-gray-700">တစ်ဦးလျှင် အနည်းဆုံး (MMK)</label>
+                            <input type="number" id="min-amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="100" required>
+                        </div>
+                        <div class="col-span-1">
+                            <label for="max-amount" class="block text-sm font-medium text-gray-700">တစ်ဦးလျှင် အများဆုံး (MMK)</label>
+                            <input type="number" id="max-amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="100" required>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">လက်ရှိအဖွဲ့ဝင်ဦးရေ</label>
+                            <p id="member-count" class="mt-1 text-2xl font-bold text-green-700 p-2"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="team-members" class="block text-sm font-medium text-gray-700">အဖွဲ့ဝင်စာရင်း (တစ်ကြောင်းစီခွဲရေးပါ)</label>
+                        <textarea id="team-members" rows="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition-colors">💾 အချက်အလက်များ သိမ်းဆည်းရန်</button>
+                    <p id="admin-message" class="text-sm mt-2 text-center font-semibold text-green-600 hidden"></p>
+                </form>
+            </div>
+
+            <!-- Spin Area -->
+            <div id="spin-area" class="flex flex-col items-center justify-center p-6 md:p-8">
+                <!-- 
+                *** NOTE: The user requested to hide the parameters, so the current parameters display block is removed from the public view. *** -->
+                
+                <div class="relative w-48 h-48 md:w-64 md:h-64 mb-8">
+                    <!-- Wheel Simulation -->
+                    <div id="wheel" class="wheel-circle w-full h-full rounded-full shadow-xl flex items-center justify-center border-4 border-yellow-700">
+                        <div class="text-white text-center font-extrabold text-lg md:text-xl transform -rotate-45 p-4 bg-yellow-900/80 rounded-full">
+                            မုန့်ဖိုး
+                        </div>
+                    </div>
+                    <!-- Pointer -->
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[15px] border-r-[15px] border-b-[30px] border-l-transparent border-r-transparent border-b-red-600"></div>
+                </div>
+
+                <button id="generate-btn" class="w-full max-w-xs bg-red-600 text-white font-bold py-4 px-4 rounded-full text-xl hover:bg-red-700 transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-300">
+                    💰 စတင်လှည့်မည် 💰
+                </button>
+                <p id="spin-status" class="mt-4 text-center text-sm text-gray-600 h-6"></p>
+                <button id="reset-btn" class="mt-4 w-full max-w-xs bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300" style="display: none;">ထပ်မံပြုလုပ်မည်</button>
+            </div>
+
+            <!-- Results Area -->
+            <div id="results-section" class="mt-8 pt-6 border-t border-gray-300" style="display: none;">
+                <div class="flex justify-between items-center mb-4">
+                     <h2 class="text-xl font-bold text-yellow-800">ရလဒ်များ</h2>
+                     <div id="summary" class="text-right text-base font-semibold"></div>
+                </div>
+               
+                <div id="results-container" class="grid grid-cols-2 sm:grid-cols-3 gap-4 min-h-[100px] p-2">
+                    <!-- Results cards will appear here -->
+                </div>
+            </div>
+            
+        </main>
+
+        <footer class="text-center mt-8 text-sm text-gray-500">
+            <p>&copy; 2025 | ပျော်ရွှင်စရာသီတင်းကျွတ်ဖြစ်ပါစေ။</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // --- Hardcoded Authentication Credentials ---
+        const ADMIN_USERNAME = 'kmt';
+        const ADMIN_PASSWORD = 'Thadingyut2025';
+        
+        // --- Local Storage Keys ---
+        const LS_KEY = 'thadingyut_data';
+
+        // --- Default Data ---
+        const defaultData = {
+            totalAmount: 30000,
+            minAmount: 3000,
+            maxAmount: 7000,
+            teamMembers: [
+                "sis TTM", "sis TWN", "sis NHHM", "sis EMT", "bro YHA",
+                "sis LLO", "sis PDL", "sis ZMO", "bro KMT"
+            ].join('\n')
+        };
+        
+        let appData;
+
+        // --- DOM Elements ---
+        const resultsContainerEl = document.getElementById('results-container');
+        const generateBtn = document.getElementById('generate-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const summaryEl = document.getElementById('summary');
+        const wheelEl = document.getElementById('wheel');
+        const spinAreaEl = document.getElementById('spin-area');
+        const resultsSectionEl = document.getElementById('results-section');
+        const adminLoginBtn = document.getElementById('admin-login-btn');
+        const loginSectionEl = document.getElementById('login-section');
+        const adminPanelEl = document.getElementById('admin-panel');
+        const loginForm = document.getElementById('login-form');
+        const adminForm = document.getElementById('admin-form');
+        const loginErrorEl = document.getElementById('login-error');
+        const closeAdminBtn = document.getElementById('close-admin-btn');
+        const adminMessageEl = document.getElementById('admin-message');
+        const memberCountEl = document.getElementById('member-count');
+        const spinStatusEl = document.getElementById('spin-status');
+
+        // --- Utility Functions ---
+
+        function loadData() {
+            try {
+                const storedData = localStorage.getItem(LS_KEY);
+                if (storedData) {
+                    appData = JSON.parse(storedData);
+                    // Ensure teamMembers is a string for the textarea
+                    if (Array.isArray(appData.teamMembers)) {
+                        appData.teamMembers = appData.teamMembers.join('\n');
+                    }
+                } else {
+                    appData = defaultData;
+                }
+            } catch (e) {
+                console.error("Error loading data from localStorage, using defaults.", e);
+                appData = defaultData;
+            }
+        }
+
+        function saveData(data) {
+            try {
+                // Ensure teamMembers is stored as a string for simplicity
+                localStorage.setItem(LS_KEY, JSON.stringify(data));
+                appData = data;
+                updateAdminParamsDisplay(); // Update admin panel after saving
+                return true;
+            } catch (e) {
+                console.error("Error saving data to localStorage.", e);
+                return false;
+            }
+        }
+
+        function updateAdminParamsDisplay() {
+            const members = appData.teamMembers.split('\n').filter(n => n.trim() !== '');
+            memberCountEl.textContent = members.length;
+        }
+
+        function distributeMoney(members, total, min, max) {
+            const numMembers = members.length;
+            let amounts = [];
+            let remainingTotal = total;
+            
+            // Basic validation
+            const totalMin = numMembers * min;
+            const totalMax = numMembers * max;
+
+            if (total < totalMin || total > totalMax) {
+                alert(`Error: The total amount ${total.toLocaleString()} MMK is not valid for ${numMembers} members with min ${min.toLocaleString()} and max ${max.toLocaleString()}. Total must be between ${totalMin.toLocaleString()} and ${totalMax.toLocaleString()} MMK.`);
+                return null;
+            }
+
+            for (let i = 0; i < numMembers - 1; i++) {
+                const remainingN = numMembers - (i + 1);
+                
+                // Calculate actual possible range for the current slot
+                const maxPossible = remainingTotal - (remainingN * min);
+                const minPossible = remainingTotal - (remainingN * max);
+
+                const high = Math.min(max, maxPossible);
+                const low = Math.max(min, minPossible);
+                
+                // Ensure low is not greater than high (should be handled by validation above, but safe check)
+                if (low > high) {
+                    console.error("Distribution bounds error. Adjusting bounds.");
+                    amounts.push(min); // Fallback to minimum
+                    remainingTotal -= min;
+                    continue;
+                }
+
+                const randomAmount = Math.floor(Math.random() * (high - low + 1)) + low;
+                
+                amounts.push(randomAmount);
+                remainingTotal -= randomAmount;
+            }
+            
+            // The last member takes the remainder
+            amounts.push(remainingTotal);
+            
+            return amounts;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function revealResults(shuffledTeam, amounts, totalDistributed) {
+            resultsContainerEl.innerHTML = '';
+            
+            shuffledTeam.forEach((member, index) => {
+                const amount = amounts[index];
+
+                const card = document.createElement('div');
+                card.className = 'card-enter bg-white p-3 rounded-xl shadow-lg text-center border-2 border-yellow-400 hover:scale-[1.02] transition duration-200';
+                card.style.animationDelay = `${index * 100}ms`;
+                
+                card.innerHTML = `
+                    <div class="font-bold text-yellow-900 text-base">${member}</div>
+                    <div class="text-xl font-mono text-red-600 mt-1 font-extrabold">${amount.toLocaleString()} <span class="text-sm">MMK</span></div>
+                `;
+                resultsContainerEl.appendChild(card);
+            });
+            
+            summaryEl.innerHTML = `<span class="text-gray-600">စုစုပေါင်း:</span> <span class="text-red-600 font-extrabold">${totalDistributed.toLocaleString()} MMK</span>`;
+            
+            resultsSectionEl.style.display = 'block';
+            resetBtn.style.display = 'block';
+            spinAreaEl.classList.remove('p-8');
+            spinAreaEl.classList.add('p-4');
+            spinStatusEl.textContent = "✅ ငွေခွဲဝေမှု ပြီးဆုံးပါပြီ။";
+        }
+
+        // --- Event Handlers ---
+
+        function handleSpin() {
+            const members = appData.teamMembers.split('\n').filter(n => n.trim() !== '');
+            if (members.length === 0) {
+                 spinStatusEl.textContent = "❌ အဖွဲ့ဝင်စာရင်းကို စီမံခန့်ခွဲမှုမှ ထည့်သွင်းပေးပါ။";
+                 return;
+            }
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🔄 စနစ်မှ တွက်ချက်နေပါသည်...';
+            spinStatusEl.textContent = "ဘီးကို လှည့်နေပါသည်...";
+            
+            // 1. Start the visual spin animation
+            wheelEl.classList.add('spinning');
+            
+            // 2. Run the distribution logic
+            const shuffledTeam = shuffleArray([...members]);
+            const amounts = distributeMoney(members, appData.totalAmount, appData.minAmount, appData.maxAmount);
+
+            if (!amounts) {
+                // Handle the error displayed inside distributeMoney (using alert)
+                generateBtn.disabled = false;
+                generateBtn.textContent = '💰 စတင်လှည့်မည် 💰';
+                wheelEl.classList.remove('spinning');
+                spinStatusEl.textContent = "❌ တွက်ချက်မှုအမှား။ စီမံခန့်ခွဲမှုတွင် ပြန်စစ်ပါ။";
+                return;
+            }
+
+            const totalDistributed = amounts.reduce((sum, current) => sum + current, 0);
+
+            // 3. Wait for the spin animation to finish (3 seconds)
+            setTimeout(() => {
+                wheelEl.classList.remove('spinning');
+                generateBtn.style.display = 'none';
+                generateBtn.disabled = false;
+                
+                // 4. Display the calculated results
+                revealResults(shuffledTeam, amounts, totalDistributed);
+            }, 3000); 
+        }
+        
+        function reset() {
+            resultsContainerEl.innerHTML = '';
+            summaryEl.innerHTML = '';
+            resultsSectionEl.style.display = 'none';
+            generateBtn.style.display = 'block';
+            generateBtn.textContent = '💰 စတင်လှည့်မည် 💰';
+            resetBtn.style.display = 'none';
+            spinAreaEl.classList.add('p-8');
+            spinAreaEl.classList.remove('p-4');
+            spinStatusEl.textContent = "";
+        }
+        
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                loginSectionEl.classList.add('hidden');
+                adminPanelEl.classList.remove('hidden');
+                loginErrorEl.classList.add('hidden');
+                // Populate admin form with current data
+                document.getElementById('total-amount').value = appData.totalAmount;
+                document.getElementById('min-amount').value = appData.minAmount;
+                document.getElementById('max-amount').value = appData.maxAmount;
+                document.getElementById('team-members').value = appData.teamMembers;
+                updateAdminParamsDisplay(); // Update member count in panel
+            } else {
+                loginErrorEl.classList.remove('hidden');
+            }
+        }
+        
+        function handleAdminSave(event) {
+            event.preventDefault();
+
+            const newTotal = parseInt(document.getElementById('total-amount').value);
+            const newMin = parseInt(document.getElementById('min-amount').value);
+            const newMax = parseInt(document.getElementById('max-amount').value);
+            const newMembersText = document.getElementById('team-members').value;
+            const membersArray = newMembersText.split('\n').filter(n => n.trim() !== '');
+
+            const totalMinRequired = membersArray.length * newMin;
+            const totalMaxRequired = membersArray.length * newMax;
+            
+            if (newTotal < totalMinRequired || newTotal > totalMaxRequired) {
+                adminMessageEl.textContent = `❌ မမှန်ကန်ပါ။ စုစုပေါင်းငွေပမာဏသည် ${membersArray.length} ယောက်အတွက် ${totalMinRequired.toLocaleString()} MMK မှ ${totalMaxRequired.toLocaleString()} MMK အတွင်း ဖြစ်ရပါမည်။`;
+                adminMessageEl.classList.remove('hidden');
+                adminMessageEl.classList.remove('text-green-600');
+                adminMessageEl.classList.add('text-red-600');
+                return;
+            }
+
+            const newData = {
+                totalAmount: newTotal,
+                minAmount: newMin,
+                maxAmount: newMax,
+                teamMembers: newMembersText // Save as string
+            };
+
+            if (saveData(newData)) {
+                adminMessageEl.textContent = '✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။';
+                adminMessageEl.classList.remove('hidden');
+                adminMessageEl.classList.add('text-green-600');
+                adminMessageEl.classList.remove('text-red-600');
+                reset(); // Reset main screen to reflect new data
+            } else {
+                adminMessageEl.textContent = '❌ သိမ်းဆည်းရန် အမှားရှိနေပါသည်။';
+                adminMessageEl.classList.remove('hidden');
+                adminMessageEl.classList.remove('text-green-600');
+                adminMessageEl.classList.add('text-red-600');
+            }
+        }
+
+        function toggleLogin() {
+            loginSectionEl.classList.toggle('hidden');
+            adminPanelEl.classList.add('hidden'); // Close admin panel if open
+            loginErrorEl.classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function closeAdminPanel() {
+            adminPanelEl.classList.add('hidden');
+            loginSectionEl.classList.add('hidden');
+            adminMessageEl.classList.add('hidden');
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            generateBtn.addEventListener('click', handleSpin);
+            resetBtn.addEventListener('click', reset);
+            loginForm.addEventListener('submit', handleLogin);
+            adminForm.addEventListener('submit', handleAdminSave);
+            adminLoginBtn.addEventListener('click', toggleLogin);
+            closeAdminBtn.addEventListener('click', closeAdminPanel);
+            
+            // Re-validate member count on textarea input when admin panel is visible
+             document.getElementById('team-members').addEventListener('input', () => {
+                if (!adminPanelEl.classList.contains('hidden')) {
+                    const members = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '');
+                    memberCountEl.textContent = members.length;
+                }
+            });
+
+            wheelEl.style.transform = 'rotate(0deg)';
+        });
+
+    </script>
+</body>
+</html>
