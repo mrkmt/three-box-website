@@ -21,7 +21,7 @@
     </script>
     
     <!-- Chosen Palette: Dynamic based on theme (Festive, Modern, Minimal) -->
-    <!-- Application Structure Plan: Implemented a Time Lock based on user's request (Oct 6, 2025, 19:00 MYT). The main UI shows a responsive countdown timer, disabling the spin button until the unlock time. Wheel size and overall layout improved for mobile responsiveness. -->
+    <!-- Application Structure Plan: Time Lock control moved to Admin Panel (DateTime Input). The main UI shows a responsive countdown timer, disabling the spin button until the Admin-set unlock time. Wheel size and overall layout improved for mobile responsiveness. -->
     <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts, enhanced engagement, and customization. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing dynamic theme colors. Confetti animation (Canvas/JS) for celebration. Result Modal (HTML/CSS) for focused output. Interaction: Sound effects for spin/result. Admin theme and title selection. PNG download of the result. Justification: Confetti animation provides a high "wow" factor. Modal centralizes the result and improves clarity. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling, Tone.js for audio, Canvas for PNG download and Confetti. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -183,6 +183,13 @@
                         <label for="app-title-input" class="block text-sm font-medium text-gray-700">App
                             ခေါင်းစဥ◌်/အဖွဲ့အမည်</label>
                         <input type="text" id="app-title-input"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                    </div>
+
+                    <!-- Lock Time Input -->
+                    <div class="col-span-2">
+                        <label for="lock-datetime-input" class="block text-sm font-medium text-gray-700">စတင်ခွင့်ပြုမည့် အချိန် (မြန်မာစံတော်ချိန်ဖြင့်)</label>
+                        <input type="datetime-local" id="lock-datetime-input"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
                     </div>
 
@@ -348,11 +355,13 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script type="module">
-
+        // --- Hardcoded Authentication Credentials (Client-Side Check Required for Single File) ---
+        const ADMIN_USERNAME = 'kmt';
+        const ADMIN_PASSWORD = 'Thadingyut2025'; 
         
-        // --- Game Lockout Time (Monday, Oct 6, 2025, 19:00:00 GMT+0630) ---
-        // Sasana Year 2569 / Myanmar Year 1387 Thadingyut Full Moon (Approximated time lock)
-        const LOCKOUT_TIMESTAMP_MS = 1728217800000; 
+        // --- Game Lockout Time (Default - Oct 6, 2025, 19:00:00 GMT+0630) ---
+        const DEFAULT_LOCKOUT_TIMESTAMP = 1728217800000; 
+        let lockTimestamp = DEFAULT_LOCKOUT_TIMESTAMP;
         let isLocked = true;
 
 
@@ -407,6 +416,7 @@
             minAmount: 3000,
             maxAmount: 7000,
             theme: 'festive',
+            lockoutTime: new Date(DEFAULT_LOCKOUT_TIMESTAMP).toISOString().slice(0, 16), // Default ISO format for input
             teamMembers: [
                 "sis TTM", "sis TWN", "sis NHHM", "sis EMT", "bro YHA",
                 "sis LLO", "sis PDL", "sis ZMO", "bro KMT"
@@ -464,6 +474,7 @@
         const appTitleInputEl = document.getElementById('app-title-input');
         const resultWishEl = document.getElementById('result-wish'); 
         const lockCountdownEl = document.getElementById('lock-countdown');
+        const lockDatetimeInputEl = document.getElementById('lock-datetime-input');
         
         // Confetti Canvas
         const confettiCanvas = document.getElementById('confetti-canvas');
@@ -487,9 +498,19 @@
                     auth = firebase.getAuth(app);
                     firebase.setLogLevel('error'); 
 
-                    // Sign in anonymously for access based on the security rules
-                    await firebase.signInAnonymously(auth); 
-                    userId = auth.currentUser.uid;
+                    // --- ATTEMPT ANONYMOUS SIGN IN ---
+                    try {
+                        await firebase.signInAnonymously(auth); 
+                        userId = auth.currentUser.uid;
+                    } catch (authError) {
+                        // Check for the specific referer block error code
+                        if (authError.message.includes('auth/requests-from-referer') || authError.code === 'auth/unauthorized-domain') {
+                            console.warn("⚠️ Firebase Auth Referer Error Detected. Proceeding without explicit sign-in.");
+                        } else {
+                             // Re-throw other critical Auth errors
+                             throw authError; 
+                        }
+                    }
                     
                     setupGameListener();
                     setupTone(); 
@@ -566,6 +587,11 @@
                     gameData = docSnap.data();
                     if (gameData.appTitle === undefined) gameData.appTitle = defaultData.appTitle;
                     if (gameData.theme === undefined) gameData.theme = defaultData.theme;
+                    if (gameData.lockoutTime) {
+                        lockTimestamp = new Date(gameData.lockoutTime).getTime();
+                    } else {
+                        lockTimestamp = DEFAULT_LOCKOUT_TIMESTAMP;
+                    }
                     renderGameUI();
                 } else {
                     initializeDefaultGame();
@@ -593,6 +619,7 @@
                 minAmount: defaultData.minAmount,
                 maxAmount: defaultData.maxAmount,
                 theme: defaultData.theme,
+                lockoutTime: defaultData.lockoutTime, // Save default lockout time
                 teamMembers: initialMembers,
                 prizes: initialPrizes,
                 lastUpdated: new Date().toISOString()
@@ -608,7 +635,7 @@
 
         function checkLockStatus() {
             const now = Date.now();
-            const timeRemaining = LOCKOUT_TIMESTAMP_MS - now;
+            const timeRemaining = lockTimestamp - now;
             const lockContainer = document.getElementById('lock-countdown-container');
 
             if (timeRemaining <= 0) {
@@ -629,6 +656,7 @@
                     `${formatUnit(days, 'ရက်')} ${formatUnit(hours, 'နာရီ')} ${formatUnit(minutes, 'မိနစ်')} ${formatUnit(seconds, 'စက္ကန့်')} ကျန်ရှိ`;
 
                 lockCountdownEl.textContent = countdownString.trim() || 'စနစ်အား စစ်ဆေးနေပါသည်...';
+                lockContainer.classList.remove('hidden'); 
             }
             
             // Update button state based on lock status and selection
@@ -1059,59 +1087,33 @@
 
         // --- Admin Panel Functions ---
 
-        async function handleLogin(event) {
+        function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Error message ကို အရင်ဖျောက်ထားပါ
-            loginErrorEl.classList.add('hidden');
-
-            // Login စစ်ဆေးမှုကို Netlify Function (Server) ဆီ POST Request ပို့လိုက်ခြင်း
-            try {
-                const response = await fetch('/.netlify/functions/admin-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password }) // Username, Password ကို Server ကို ပို့လိုက်ခြင်း
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    // 200 OK နဲ့ Server က success ပြန်ပို့ရင် Login အောင်မြင်
-
-                    // Server က ပေးလိုက်တဲ့ Token ကို Browser ရဲ့ LocalStorage မှာ သိမ်းပါ
-                    localStorage.setItem('adminToken', data.token);
-
-                    // UI ကို Admin Panel ဖွင့်ဖို့ ပြင်ဆင်ပါ
-                    loginSectionEl.classList.add('hidden');
-                    adminPanelEl.classList.remove('hidden');
-                    loginErrorEl.classList.add('hidden');
-
-                    // Admin Panel အတွက် လိုအပ်တဲ့ data တွေ ပြန်ခေါ်ပြီး ပြသပါ
-                    updateAdminPanelForms();
-                    renderAdminResultsTable();
-                    calculateAndDisplayPrizeSum();
-
-                } else {
-                    // Login မအောင်မြင်ရင် Error ပြပါ (Server Function က ပေးလိုက်တဲ့ message ကို ပြပါ)
-                    loginErrorEl.textContent = data.message || 'ဝင်ရောက်ခွင့် မပြုပါ';
-                    loginErrorEl.classList.remove('hidden');
-                }
-
-            } catch (e) {
-                console.error("Login API Error:", e);
-                loginErrorEl.textContent = '❌ စနစ်ချိတ်ဆက်မှု အမှားဖြစ်ပွားပါသည်။';
+            // Reverting to client-side check (removed Netlify function fetch)
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                loginSectionEl.classList.add('hidden');
+                adminPanelEl.classList.remove('hidden');
+                loginErrorEl.classList.add('hidden');
+                updateAdminPanelForms();
+                renderAdminResultsTable();
+                calculateAndDisplayPrizeSum();
+            } else {
+                loginErrorEl.textContent = 'အသုံးပြုသူအမည် (သို့) လျှို့ဝှက်နံပါတ် မမှန်ကန်ပါ။';
                 loginErrorEl.classList.remove('hidden');
             }
         }
-
 
         function updateAdminPanelForms() {
             appTitleInputEl.value = gameData.appTitle; 
             document.getElementById('total-amount').value = gameData.totalAmount;
             document.getElementById('min-amount').value = gameData.minAmount;
             document.getElementById('max-amount').value = gameData.maxAmount;
+            
+            // Set the datetime input value from gameData.lockoutTime
+            lockDatetimeInputEl.value = gameData.lockoutTime || defaultData.lockoutTime;
             
             appThemeSelectEl.innerHTML = '';
             Object.keys(THEMES).forEach(key => {
@@ -1253,8 +1255,10 @@
             }
             
             const changedInputId = event.target.id;
-            if (['total-amount', 'min-amount', 'max-amount', 'app-title-input', 'app-theme-select'].includes(changedInputId)) {
-                renderPrizeSetupForms(); 
+            if (['total-amount', 'min-amount', 'max-amount', 'app-title-input', 'app-theme-select', 'lock-datetime-input'].includes(changedInputId)) {
+                if (changedInputId !== 'lock-datetime-input' && changedInputId !== 'app-theme-select') {
+                    renderPrizeSetupForms(); 
+                }
             }
             
             calculateAndDisplayPrizeSum();
@@ -1408,6 +1412,7 @@
             const newMax = parseInt(document.getElementById('max-amount').value);
             const newTheme = document.getElementById('app-theme-select').value;
             const newMembersText = document.getElementById('team-members').value;
+            const newLockoutTime = lockDatetimeInputEl.value; // Get the ISO string from input
             const membersArray = newMembersText.split('\n').filter(n => n.trim() !== '');
 
             const totalMinRequired = membersArray.length * newMin;
@@ -1430,16 +1435,29 @@
                  displayAdminMessage(`❌ သိမ်းဆည်းရန် အမှား။ ဆုပမာဏ စုစုပေါင်း (${prizeSum.toLocaleString()} MMK) သည် စုစုပေါင်းငွေ (${newTotal.toLocaleString()} MMK) နှင့် မတူညီပါ။`, 'red');
                  return;
             }
+            
+            if (!newLockoutTime) {
+                 displayAdminMessage('❌ စတင်ခွင့်ပြုမည့် အချိန်ကို သတ်မှတ်ရန် လိုအပ်ပါသည်။', 'red');
+                 return;
+            }
+
+            // Keep spun status for existing members, reset if member list changes size or content (simple reset)
+            const oldMembers = gameData.teamMembers.map(m => m.name);
+            let membersNeedReset = (membersArray.length !== oldMembers.length) || membersArray.some((name, index) => name !== oldMembers[index]);
 
             const updatedMembers = membersArray.map(name => {
-                return { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
+                 const existing = gameData.teamMembers.find(m => m.name === name);
+                 if (existing && !membersNeedReset) {
+                     return existing; // Keep existing spin status and result
+                 }
+                 return { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
             });
             
             const newPrizes = gameData.prizes.map(p => ({
                 colorName: p.colorName,
                 hex: p.hex,
                 amount: parseInt(p.amount),
-                allocated: false 
+                allocated: membersNeedReset ? false : p.allocated // Reset allocated status if member list changed
             }));
 
 
@@ -1449,6 +1467,7 @@
                 minAmount: newMin,
                 maxAmount: newMax,
                 theme: newTheme,
+                lockoutTime: newLockoutTime,
                 teamMembers: updatedMembers, 
                 prizes: newPrizes,
                 lastUpdated: new Date().toISOString()
@@ -1457,7 +1476,13 @@
             try {
                 const docRef = firebase.doc(db, GAME_DOC_PATH);
                 await firebase.setDoc(docRef, newData);
-                displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီး၊ ဂိမ်းအခြေအနေကို ပြန်လည်သတ်မှတ်လိုက်ပါပြီ။', 'green');
+                
+                if (membersNeedReset) {
+                    displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီး၊ ဂိမ်းအခြေအနေကို (အဖွဲ့၀◌င်စာရင်း ပြောင်းလဲမှုကြောင့်) ပြန်လည်သတ်မှတ်လိုက်ပါပြီ။', 'green');
+                } else {
+                    displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။', 'green');
+                }
+                
             } catch (e) {
                 console.error("Firestore Save Error:", e);
                 displayAdminMessage('❌ သိမ်းဆည်းရန် အမှားရှိနေပါသည်။', 'red');
@@ -1521,11 +1546,13 @@
             addPrizeBtn.addEventListener('click', addPrizeField);
             removePrizeBtn.addEventListener('click', removeLastPrizeField);
             
+            // Listeners for auto-recalculate/update
             document.getElementById('total-amount').addEventListener('input', handlePrizeInput);
             document.getElementById('min-amount').addEventListener('input', handlePrizeInput);
             document.getElementById('max-amount').addEventListener('input', handlePrizeInput);
             appTitleInputEl.addEventListener('input', handlePrizeInput);
             appThemeSelectEl.addEventListener('change', handlePrizeInput);
+            lockDatetimeInputEl.addEventListener('input', handlePrizeInput); // Add listener for new input
             
             document.getElementById('team-members').addEventListener('input', (event) => {
                 const newMembersCount = event.target.value.split('\n').filter(n => n.trim() !== '').length;
