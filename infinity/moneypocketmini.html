@@ -1,48 +1,57 @@
 <!DOCTYPE html>
 <html lang="my">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>သီတင်းကျွတ်မှာ စိတ်အေးချမ်းသာကြပါစေ</title>
+    <title>သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ်</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Pyidaungsu Font Link -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Pyidaungsu+Text:wght@400;700&display=swap" rel="stylesheet">
-    
+
     <!-- Firebase & Tone.js SDKs -->
     <script src="https://cdn.jsdelivr.net/npm/tone@14.9.15/build/Tone.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        window.firebase = { initializeApp, getAuth, signInAnonymously, getFirestore, doc, getDoc, setDoc, onSnapshot, setLogLevel };
+
+        window.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot, setLogLevel };
     </script>
-    
+
     <!-- Chosen Palette: Dynamic based on theme (Festive, Modern, Minimal) -->
-    <!-- Application Structure Plan: Mobile-first layout restored. Secured Admin Panel for configuration and Global Reset. Instant play (Time Lock removed). Robust initial data check implemented. -->
-    <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts, enhanced engagement, and customization. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing dynamic theme colors. Confetti animation (Canvas/JS) for celebration. Result Modal (HTML/CSS) for focused output. Interaction: Sound effects for spin/result. Admin theme and title selection. PNG download of the result. Justification: Mobile-optimized CSS/Tailwind for better responsive UX. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling, Tone.js for audio, Canvas for PNG download and Confetti. -->
+    <!-- Application Structure Plan: Three main views controlled by JS state: 1. Admin Panel (Secured Login/Config/Results Table). 2. Loading/Setup Screen. 3. Public Game View (Member Selection / Wheel Spin). Implemented Confetti animation and a modern Modal dialog for presenting results for better UX. -->
+    <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts, enhanced engagement, and customization. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing dynamic theme colors. Confetti animation (Canvas/JS) for celebration. Result Modal (HTML/CSS) for focused output. Interaction: Sound effects for spin/result. Admin theme and title selection. PNG download of the result. Justification: Confetti animation provides a high "wow" factor. Modal centralizes the result and improves clarity. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling, Tone.js for audio, Canvas for PNG download and Confetti. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
-            /* Pyidaungsu is added for better compatibility */
-            font-family: 'Pyidaungsu Text', 'Padauk', sans-serif; 
+            font-family: 'Padauk', sans-serif;
             background-color: #FDFBF6;
         }
+
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(1080deg); } 
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(1080deg);
+            }
         }
+
         .spinning {
-            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
+            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
+
         .wheel-circle {
             transition: transform 3s ease-out;
             border-radius: 50%;
             overflow: hidden;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
+
         .wheel-circle::before {
             content: '';
             position: absolute;
@@ -52,9 +61,10 @@
             height: 100%;
             z-index: 10;
             pointer-events: none;
-            box-shadow: 0 0 0 10px var(--wheel-border-color, #FBBF24); 
+            box-shadow: 0 0 0 10px var(--wheel-border-color, #FBBF24);
             border-radius: 50%;
         }
+
         .wheel-segment {
             position: absolute;
             top: 0;
@@ -63,19 +73,20 @@
             height: 50%;
             transform-origin: 0% 100%;
         }
+
         .wheel-pointer {
             position: absolute;
-            top: -15px; 
+            top: -15px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            /* Responsive Pointer Size */
-            border-left: 8px solid transparent; 
-            border-right: 8px solid transparent;
-            border-bottom: 16px solid var(--pointer-color, #D946EF); 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 20px solid var(--pointer-color, #D946EF);
             z-index: 20;
         }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -89,6 +100,7 @@
             align-items: center;
             justify-content: center;
         }
+
         .modal-content {
             background-color: #ffffff;
             border-radius: 1rem;
@@ -97,9 +109,15 @@
             transform: scale(0.9);
             transition: transform 0.3s ease-out;
         }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
         .modal-overlay.active .modal-content {
             transform: scale(1);
         }
+
         #confetti-canvas {
             position: fixed;
             top: 0;
@@ -117,13 +135,13 @@
     <div class="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
 
         <header class="text-center mb-8">
-            <h1 id="main-title" class="text-3xl md:text-4xl font-bold text-yellow-900">သီတင်းကျွတ်မှာ စိတ်အေးချမ်းသာကြပါစေ
+            <h1 id="main-title" class="text-3xl md:text-4xl font-bold text-yellow-900">🏮 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🏮
             </h1>
-            <p id="main-subtitle" class="text-gray-600 mt-2">အဖွဲ့၀◌င်များအတွက် ပျော်ရွှင်စရာ ဆုမဲကံစမ်းမည့် အစီအစဉ်</p>
+            <p id="main-subtitle" class="text-gray-600 mt-2">အဖွဲ့၀◌င်များအတွက် တစ်ဦးချင်းဆုမဲစနစ်</p>
         </header>
 
         <main
-            class="bg-white/60 backdrop-blur-sm p-4 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[500px] relative">
+            class="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[500px] relative">
 
             <!-- Admin Controls Button -->
             <div class="mb-6 text-center">
@@ -198,19 +216,19 @@
                             <label for="total-amount" class="block text-sm font-medium text-gray-700">စုစုပေါင်းငွေပမာဏ
                                 (MMK)</label>
                             <input type="number" id="total-amount"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="0" required>
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="1000" required>
                         </div>
                         <div>
                             <label for="min-amount" class="block text-sm font-medium text-gray-700">တစ်ဦးလျှင် အနည်းဆုံး
                                 (MMK)</label>
                             <input type="number" id="min-amount"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="0" required>
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="100" required>
                         </div>
                         <div class="col-span-1">
                             <label for="max-amount" class="block text-sm font-medium text-gray-700">တစ်ဦးလျှင် အများဆုံး
                                 (MMK)</label>
                             <input type="number" id="max-amount"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="0" required>
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="100" required>
                         </div>
                         <div class="col-span-1">
                             <label class="block text-sm font-medium text-gray-700">လက်ရှိအဖွဲ့ဝင်ဦးရေ</label>
@@ -247,8 +265,9 @@
                     <p id="admin-message" class="text-sm mt-2 text-center font-semibold text-green-600 hidden"></p>
                 </form>
 
-                <h3 class="text-xl font-bold text-green-800 mt-8 border-t pt-4">၃. လက်ရှိ ရလဒ်များ (စောင့်ကြည့်ရန်)</h3>
-                <p class="text-sm text-gray-600 mb-4">လှည့်ပြီးသူများ၏ ရလဒ်များကို ဤနေရာတွင် ကြည့်ရှုနိုင်သည်။</p>
+                <h3 class="text-xl font-bold text-green-800 mt-8 border-t pt-4">၃. လက်ရှိ ရလဒ်များ (လျှို့ဝှက်ချက်)</h3>
+                <p class="text-sm text-gray-600 mb-4">ဘယ်သူက ဘယ်အရောင်နဲ့ ဘယ်လောက်ရသွားလဲဆိုတာ အောက်မှာ
+                    တိုက်ရိုက်ပေါ်နေပါတယ်။</p>
                 <div class="overflow-x-auto">
                     <table class="min-w-full bg-white rounded-lg shadow-md">
                         <thead>
@@ -257,6 +276,7 @@
                                 <th class="p-3 text-center">အခြေအနေ</th>
                                 <th class="p-3 text-center">အရောင်</th>
                                 <th class="p-3 text-right">ငွေပမာဏ (MMK)</th>
+                                <th class="p-3 text-center">Reset</th>
                             </tr>
                         </thead>
                         <tbody id="admin-results-table">
@@ -264,26 +284,12 @@
                         </tbody>
                     </table>
                 </div>
-                
-                <!-- Global Reset Button -->
-                <button id="global-reset-btn"
-                    class="w-full mt-4 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-colors">
-                    🔄 အားလုံး ပြန်လည်စတင်မည် (Reset All)
-                </button>
-                
             </div>
-            <!-- End Admin/Config Panel -->
 
             <!-- Public Game View (Wheel & Selection) -->
             <div id="game-view" class="flex flex-col items-center justify-center p-6 md:p-8 hidden">
-                <h3 class="text-lg font-bold text-yellow-800 mb-4">🎉 မုန့်ဖိုးလှည့်ရန် 🎉</h3>
-                
-                <!-- Fixed Date/Time Message (No Countdown) -->
-                <div class="w-full max-w-xs mb-6 p-3 rounded-lg text-center bg-yellow-100 border border-yellow-300">
-                    <p class="text-sm font-semibold text-yellow-800 mb-1">၁၃၈၇ ခုနှစ်၊ သီတင်းကျွတ်လပြည့် အဘိဓမ္မာနေ့</p>
-                    <p class="text-md font-bold text-red-600 mb-2">ကံစမ်းမည့် အစီအစဉ်လေးကို ည ၇ နာရီမှ စတင်နိုင်ပါမည်</p>
-                </div>
-                
+                <h3 class="text-lg font-bold text-yellow-800 mb-4">🎉 မုန့်ဖိုးလှည့်ရန်</h3>
+
                 <!-- Member Selector -->
                 <div class="w-full max-w-xs mb-6">
                     <label for="spinner-select" class="block text-sm font-medium text-gray-700 mb-2">သင့်အမည်ကို
@@ -294,8 +300,8 @@
                     </select>
                 </div>
 
-                <!-- Wheel Area (Responsive Fix: w-56 on mobile, w-64 on desktop) -->
-                <div class="relative w-56 h-56 md:w-64 md:h-64 mb-8">
+                <!-- Wheel Area -->
+                <div class="relative w-64 h-64 mb-8">
                     <div id="wheel" class="wheel-circle w-full h-full border-4 relative">
                         <!-- Segments will be inserted here by JS -->
                     </div>
@@ -307,13 +313,13 @@
                     disabled>
                     💰 လှည့်မည်
                 </button>
-                <p id="spin-status" class="mt-4 text-center text-sm text-gray-600 h-6">လှည့်မည့်သူကို ရွေးချယ်ပါ။</p>
+                <p id="spin-status" class="mt-4 text-center text-sm text-gray-600 h-6"></p>
 
                 <!-- Individual Result Modal Trigger is now in the modal itself -->
 
                 <div id="reset-info"
                     class="mt-6 p-4 bg-gray-100 rounded-lg text-sm text-gray-600 hidden w-full max-w-xs text-center">
-                    ဂိမ်းအသစ်စတင်ရန် စီမံခန့်ခွဲမှုမှ ပြန်လည်စတင်နိုင်ပါသည်။
+                    ဂိမ်းအသစ်စတင်ရန် Admin မှသာ ပြန်လည်သတ်မှတ်နိုင်ပါသည်။
                 </div>
             </div>
 
@@ -327,7 +333,7 @@
 
     <!-- Result Modal -->
     <div id="result-modal-overlay" class="modal-overlay hidden">
-        <div id="result-modal-content" class="modal-content p-6 w-11/12 max-w-sm md:max-w-md text-center">
+        <div id="result-modal-content" class="modal-content p-6 w-11/12 max-w-md text-center">
             <h3 class="text-2xl font-bold text-yellow-800 mb-4">🎉 ဂုဏ်ယူပါတယ် 🎉</h3>
             <p id="modal-member-name" class="text-lg font-semibold text-gray-700 mb-3"></p>
             <p class="text-gray-700">သင်ရရှိသောဆုမှာ:</p>
@@ -350,21 +356,19 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script type="module">
-        // --- Hardcoded Authentication Credentials (NEW PASSWORD) ---
-        const ADMIN_USERNAME = 'kmt';
-        const ADMIN_PASSWORD = 'Thadingyut2026'; 
-        
-        // --- Firebase Globals & Setup (Using user's provided hardcoded config) ---
+
+        // --- Firebase Globals & Setup ---
         const firebaseConfig = {
-            apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw",
-            authDomain: "kmtechspaceship.firebaseapp.com",
-            projectId: "kmtechspaceship",
-            storageBucket: "kmtechspaceship.firebasestorage.app",
-            messagingSenderId: "494150534835",
-            appId: "1:494150534835:web:d2b654e04d7b52ca1912c6",
-            measurementId: "G-CWJ6BXN5TY"
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+            appId: import.meta.env.VITE_FIREBASE_APP_ID,
+            measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
         };
-        
+
+        const initialAuthToken = null;
         const appIdForPath = firebaseConfig.projectId; 
         // FIX: New Collection Name for a clean slate
         const GAME_COLLECTION_NAME = 'thadingyut_money_pocket';
@@ -380,27 +384,27 @@
         const THEMES = {
             'festive': {
                 name: '🏮 သီတင်းကျွတ်ရွှင်လန်း',
-                pointerColor: '#D946EF', 
-                borderColor: '#FBBF24', 
+                pointerColor: '#D946EF',
+                borderColor: '#FBBF24',
                 buttonClasses: 'bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300',
             },
             'modern': {
                 name: '✨ ခေတ်မီအေးဆေး',
-                pointerColor: '#3B82F6', 
-                borderColor: '#9CA3AF', 
+                pointerColor: '#3B82F6',
+                borderColor: '#9CA3AF',
                 buttonClasses: 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300',
             },
             'minimal': {
                 name: '⚪ ရိုးရှင်းဖြူစင်',
-                pointerColor: '#1F2937', 
-                borderColor: '#000000', 
+                pointerColor: '#1F2937',
+                borderColor: '#000000',
                 buttonClasses: 'bg-gray-800 hover:bg-gray-700 focus:ring-4 focus:ring-gray-300',
             }
         };
 
-        // --- Default Data (User's requirements) ---
+        // --- Default Data ---
         const defaultData = {
-            appTitle: 'Testing Team', 
+            appTitle: 'Testing Team',
             totalAmount: 30000,
             minAmount: 3000,
             maxAmount: 7000,
@@ -424,7 +428,7 @@
         ];
 
 
-        // --- DOM Elements (Same as last optimized version) ---
+        // --- DOM Elements ---
         const loadingScreenEl = document.getElementById('loading-screen');
         const loginSectionEl = document.getElementById('login-section');
         const adminPanelEl = document.getElementById('admin-panel');
@@ -446,9 +450,10 @@
         const wheelEl = document.getElementById('wheel');
         const generateBtn = document.getElementById('generate-btn');
         const spinStatusEl = document.getElementById('spin-status');
-        const globalResetBtn = document.getElementById('global-reset-btn');
-        
+
+        // Modal Elements
         const modalOverlayEl = document.getElementById('result-modal-overlay');
+        const modalContentEl = document.getElementById('result-modal-content');
         const modalMemberNameEl = document.getElementById('modal-member-name');
         const modalResultColorDisplayEl = document.getElementById('modal-result-color-display');
         const modalDownloadBtn = document.getElementById('modal-download-btn');
@@ -459,7 +464,9 @@
         const mainTitleEl = document.getElementById('main-title');
         const mainSubtitleEl = document.getElementById('main-subtitle');
         const appTitleInputEl = document.getElementById('app-title-input');
-        
+        const resultWishEl = document.getElementById('result-wish');
+
+        // Confetti Canvas
         const confettiCanvas = document.getElementById('confetti-canvas');
         const confettiCtx = confettiCanvas.getContext('2d');
         let confettiPieces = [];
@@ -479,49 +486,25 @@
                     const app = firebase.initializeApp(firebaseConfig);
                     db = firebase.getFirestore(app);
                     auth = firebase.getAuth(app);
-                    firebase.setLogLevel('error'); 
+                    firebase.setLogLevel('error');
 
-                    // --- ATTEMPT ANONYMOUS SIGN IN ---
-                    try {
-                        await firebase.signInAnonymously(auth); 
-                        userId = auth.currentUser.uid;
-                    } catch (authError) {
-                        if (authError.message.includes('auth/requests-from-referer') || 
-                            authError.code === 'auth/unauthorized-domain' ||
-                            authError.code === 'auth/network-request-failed' 
-                        ) {
-                            console.warn("⚠️ Firebase Auth/Network Error Detected. Proceeding without explicit sign-in.");
-                        } else {
-                             throw authError; 
-                        }
-                    }
-                    
-                    // --- Check and Initialize Default Data ---
-                    const docRef = firebase.doc(db, GAME_DOC_PATH);
-                    try {
-                         const docSnap = await firebase.getDoc(docRef);
-                         if (!docSnap.exists()) {
-                             console.log("Firestore data not found. Initializing default game data.");
-                             await initializeDefaultGame();
-                         }
-                    } catch(e) {
-                         console.warn("Could not check Firestore existence. Relying on listener for data.");
-                    }
-                    // --- End Check and Initialize Default Data ---
-                    
+                    await firebase.signInAnonymously(auth);
+                    userId = auth.currentUser.uid;
+
                     setupGameListener();
-                    setupTone(); 
+                    setupTone();
+
                 } else {
                     console.error("Firebase configuration is missing or incomplete.");
                 }
             } catch (e) {
                 console.error("Firebase Initialization Error:", e);
                 loadingScreenEl.classList.add('hidden');
-                gameViewEl.classList.remove('hidden'); 
+                gameViewEl.classList.remove('hidden');
                 spinStatusEl.textContent = `❌ စနစ်ချိတ်ဆက်မှု အမှား။ (${e.message || 'Error'})`;
             }
         }
-        
+
         function setupTone() {
             if (typeof Tone === 'undefined') return;
             try {
@@ -531,7 +514,7 @@
                         audioContextStarted = true;
                     }
                 }, { once: true });
-                
+
                 spinnerSynth = new Tone.NoiseSynth({
                     noise: { type: "pink" },
                     envelope: { attack: 0.01, decay: 0.05, sustain: 1, release: 0.01 }
@@ -541,13 +524,13 @@
                     oscillator: { type: "triangle" },
                     envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 1 }
                 }).toDestination();
-                
+
                 spinnerLoop = new Tone.Loop(time => {
-                    spinnerSynth.triggerAttackRelease("16n", time, 0.3); 
+                    spinnerSynth.triggerAttackRelease("16n", time, 0.3);
                 }, "16n").start(0);
-                Tone.Transport.stop(); 
-                
-            } catch(e) {
+                Tone.Transport.stop();
+
+            } catch (e) {
                 console.warn("Tone.js setup failed:", e);
             }
         }
@@ -579,20 +562,15 @@
                     gameData = docSnap.data();
                     if (gameData.appTitle === undefined) gameData.appTitle = defaultData.appTitle;
                     if (gameData.theme === undefined) gameData.theme = defaultData.theme;
-                    
                     renderGameUI();
                 } else {
-                    // This block is only reached if the document is deleted after initial load.
                     initializeDefaultGame();
                 }
             }, (error) => {
                 console.error("Firestore Listener Error:", error);
-                loadingScreenEl.classList.add('hidden');
-                gameViewEl.classList.remove('hidden'); 
-                spinStatusEl.textContent = `❌ Data ရယူမှု အမှား။ (${error.message || 'Error'})`;
             });
         }
-        
+
         async function initializeDefaultGame() {
             const members = defaultData.teamMembers.split('\n').filter(n => n.trim() !== '');
             const initialMembers = members.map(name => ({
@@ -603,7 +581,6 @@
                 spinnerId: null
             }));
 
-            // Slice only 9 default prizes for 9 members
             const initialPrizes = calculateRandomPrizes(DEFAULT_PRIZES.slice(0, members.length), defaultData.totalAmount, defaultData.minAmount, defaultData.maxAmount);
 
             const initialData = {
@@ -627,56 +604,49 @@
 
         function renderGameUI() {
             if (!gameData) return;
-            
-            updateHeaderAndWish(); 
-            applyTheme(gameData.theme); // Apply theme (pointer/border/button color)
+
+            updateHeaderAndWish();
+            applyTheme(gameData.theme);
 
             loadingScreenEl.classList.add('hidden');
             gameViewEl.classList.remove('hidden');
 
-            // renderWheel() is called inside applyTheme()
-            renderSpinnerSelection(); 
+            renderWheel();
+            renderSpinnerSelection();
 
             if (!adminPanelEl.classList.contains('hidden')) {
                 updateAdminPanelForms();
                 renderAdminResultsTable();
             }
         }
-        
+
         function updateHeaderAndWish() {
-            if (!gameData) return; // Guard
-            const title = gameData.appTitle || 'အဖွဲ့အမည်';
-            // Custom Title/Subtitle
-            document.getElementById('main-title').textContent = "သီတင်းကျွတ်မှာ စိတ်အေးချမ်းသာကြပါစေ";
-            document.getElementById('main-subtitle').textContent = `${title} အဖွဲ့၀◌င်များအတွက် ပျော်ရွှင်စရာ ဆုမဲကံစမ်းမည့် အစီအစဉ်`;
+            const title = gameData.appTitle || 'မုန့်ဖိုးဝေစနစ်';
+            mainTitleEl.innerHTML = `🏮 ${title} မုန့်ဖိုးဝေစနစ် 🏮`;
+            mainSubtitleEl.textContent = `အဖွဲ့၀◌င်များအတွက် တစ်ဦးချင်းဆုမဲစနစ်`;
         }
-        
+
         function applyTheme(themeName) {
-            if (!gameData) return; // Guard
             const theme = THEMES[themeName] || THEMES['festive'];
             const root = document.documentElement;
-            
+
             root.style.setProperty('--pointer-color', theme.pointerColor);
             root.style.setProperty('--wheel-border-color', theme.borderColor);
-            
-            // Re-apply button classes to ensure theme change works instantly
+
             generateBtn.className = `w-full max-w-xs font-bold py-4 px-4 rounded-full text-xl transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none ${theme.buttonClasses}`;
-            generateBtn.classList.add('text-white'); 
-        
+            generateBtn.classList.add('text-white');
+
             wheelEl.style.borderColor = theme.borderColor;
-            renderWheel(); // Call renderWheel here
         }
 
         function renderWheel() {
-            if (!gameData || !gameData.prizes || !Array.isArray(gameData.prizes)) return;
-            
-            const prizes = gameData.prizes; 
+            const prizes = gameData.prizes.filter(p => !p.allocated);
             const numSegments = prizes.length;
-            wheelEl.innerHTML = ''; 
+            wheelEl.innerHTML = '';
 
             if (numSegments === 0) {
-                 wheelEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-center text-red-600 font-bold p-4 bg-gray-200/90 rounded-full">ဆုအားလုံး ပြီးဆုံးသွားပါပြီ။</div>';
-                 return;
+                wheelEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-center text-red-600 font-bold p-4 bg-gray-200/90 rounded-full">ဆုအားလုံး ပြီးဆုံးသွားပါပြီ။</div>';
+                return;
             }
 
             const anglePerSegment = 360 / numSegments;
@@ -684,9 +654,9 @@
             prizes.forEach((prize, index) => {
                 const segment = document.createElement('div');
                 segment.className = 'wheel-segment';
-                segment.style.backgroundColor = prize.hex; // Use hex color
+                segment.style.backgroundColor = prize.hex;
                 segment.style.transform = `rotate(${index * anglePerSegment}deg) skewY(-${90 - anglePerSegment}deg)`;
-                
+
                 const innerSegment = document.createElement('div');
                 innerSegment.className = 'absolute top-0 left-0 w-full h-full';
                 innerSegment.style.transform = `skewY(${90 - anglePerSegment}deg) rotate(0deg)`;
@@ -696,28 +666,21 @@
                 innerSegment.style.fontWeight = 'bold';
                 innerSegment.style.color = getContrastColor(prize.hex);
                 innerSegment.style.lineHeight = '64px';
-                
-                // Dim the text if the prize is already allocated
                 innerSegment.textContent = prize.colorName;
-                if (prize.allocated) {
-                     innerSegment.style.opacity = 0.5; 
-                }
 
                 segment.appendChild(innerSegment);
                 wheelEl.appendChild(segment);
             });
         }
-        
-        function renderSpinnerSelection() {
-            if (!gameData || !gameData.teamMembers || !Array.isArray(gameData.teamMembers)) return; 
 
+        function renderSpinnerSelection() {
             const members = gameData.teamMembers;
             spinnerSelectEl.innerHTML = '<option value="" disabled selected>--- ရွေးချယ်ပါ ---</option>';
             generateBtn.disabled = true;
             resetInfoEl.classList.add('hidden');
-            
+
             if (generateBtn.textContent.includes('လှည့်နေသည်')) {
-                return; 
+                return;
             }
 
             members.forEach(member => {
@@ -730,47 +693,42 @@
                 }
                 spinnerSelectEl.appendChild(option);
             });
-            
+
             if (members.every(m => m.spun)) {
-                 spinStatusEl.textContent = "ဂိမ်းပြီးဆုံးပါပြီ။";
-                 resetInfoEl.classList.remove('hidden');
-                 generateBtn.disabled = true;
+                spinStatusEl.textContent = "ဂိမ်းပြီးဆုံးပါပြီ။";
+                resetInfoEl.classList.remove('hidden');
             } else {
-                 spinStatusEl.textContent = "လှည့်မည့်သူကို ရွေးချယ်ပါ။"; 
+                spinStatusEl.textContent = "လှည့်မည့်သူကို ရွေးချယ်ပါ။";
             }
-            
-            spinnerSelectEl.onchange = function() {
+
+            spinnerSelectEl.onchange = function () {
                 const name = spinnerSelectEl.value;
                 const selectedMember = members.find(m => m.name === name);
 
-                if (selectedMember && selectedMember.spun) {
+                if (selectedMember && !selectedMember.spun) {
+                    generateBtn.disabled = false;
+                    spinStatusEl.textContent = `${selectedMember.name} အသင့်ဖြစ်ပါပြီ။`;
+                    generateBtn.textContent = '💰 လှည့်မည်';
+                } else if (selectedMember && selectedMember.spun) {
                     generateBtn.disabled = true;
                     spinStatusEl.textContent = `✅ ${selectedMember.name} သည် ${selectedMember.resultColor} ဆုကို ရရှိပြီးပါပြီ။`;
                     // Immediately show modal if already spun
-                    displayResultModal(selectedMember.name, selectedMember.resultColor); 
-                } else if (selectedMember && !selectedMember.spun) {
-                    generateBtn.disabled = false;
-                    generateBtn.textContent = '💰 လှည့်မည်';
-                    spinStatusEl.textContent = `${selectedMember.name} အသင့်ဖြစ်ပါပြီ။`;
+                    displayResultModal(selectedMember.name, selectedMember.resultColor);
                 } else {
                     generateBtn.disabled = true;
                     spinStatusEl.textContent = "လှည့်မည့်သူကို ရွေးချယ်ပါ။";
-                    generateBtn.textContent = '💰 လှည့်မည်';
                 }
             };
-            
-            // Initial check on load/update
-            spinnerSelectEl.dispatchEvent(new Event('change'));
         }
 
         async function handleSpin() {
             const selectedName = spinnerSelectEl.value;
-            if (!selectedName || generateBtn.disabled || !gameData) return;
-            
+            if (!selectedName || generateBtn.disabled) return;
+
             const currentMemberIndex = gameData.teamMembers.findIndex(m => m.name === selectedName);
             const currentMember = gameData.teamMembers[currentMemberIndex];
             if (!currentMember || currentMember.spun) return;
-            
+
             const availablePrizes = gameData.prizes.filter(p => !p.allocated);
             if (availablePrizes.length === 0) {
                 spinStatusEl.textContent = "ဆုမရှိတော့ပါ";
@@ -780,53 +738,55 @@
 
             const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
             const selectedPrize = availablePrizes[prizeIndex];
-            
-            // Wheel logic needs the total number of segments (allocated and unallocated) for rotation calculation
-            const totalSegments = gameData.prizes.length;
-            const targetPrizeGlobalIndex = gameData.prizes.findIndex(p => p.colorName === selectedPrize.colorName);
-            const anglePerSegment = 360 / totalSegments;
-            
-            const baseRotations = 360 * 10; 
-            const targetAngle = targetPrizeGlobalIndex * anglePerSegment + (anglePerSegment / 2);
-            
-            const offset = Math.random() * (anglePerSegment * 0.8) - (anglePerSegment * 0.4); 
+
+            const allPrizes = gameData.prizes.filter(p => !p.allocated);
+            const targetPrizeIndex = allPrizes.findIndex(p => p.colorName === selectedPrize.colorName);
+
+            const numSegments = allPrizes.length;
+            const anglePerSegment = 360 / numSegments;
+
+            const baseRotations = 360 * 10;
+            const targetAngle = targetPrizeIndex * anglePerSegment + (anglePerSegment / 2);
+            const offset = Math.random() * (anglePerSegment * 0.8) - (anglePerSegment * 0.4);
             const finalRotation = baseRotations + targetAngle + offset;
-            
+
             generateBtn.disabled = true;
             generateBtn.textContent = '🔄 လှည့်နေသည်...';
             spinStatusEl.textContent = "ဆုမဲကို ရွေးချယ်နေပါသည်...";
             wheelEl.style.transition = 'transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             wheelEl.style.transform = `rotate(${finalRotation}deg)`;
-            
-            startSpinSound(); 
+
+            startSpinSound();
 
             setTimeout(async () => {
-                stopSpinSound(); 
-                playResultSound(); 
+                stopSpinSound();
+                playResultSound();
 
+                // FIX: Immediately update local UI status and button text after animation ends (3.5s)
                 spinStatusEl.textContent = `✅ ${selectedName} အတွက် ရလဒ်ထွက်ပေါ်ပါပြီ။`;
-                wheelEl.style.transition = 'none'; 
-                generateBtn.textContent = '💰 လှည့်မည်'; 
-                
+                wheelEl.style.transition = 'none';
+                generateBtn.textContent = '💰 လှည့်မည်';
+
+                // Show Modal and Confetti first
                 displayResultModal(selectedName, selectedPrize.colorName);
                 startConfetti();
 
                 try {
                     const docRef = firebase.doc(db, GAME_DOC_PATH);
-                    
+
                     const newMembers = gameData.teamMembers.map((m, i) => {
                         if (i === currentMemberIndex) {
-                            return { 
-                                ...m, 
-                                spun: true, 
-                                resultColor: selectedPrize.colorName, 
+                            return {
+                                ...m,
+                                spun: true,
+                                resultColor: selectedPrize.colorName,
                                 resultAmount: selectedPrize.amount,
                                 spinnerId: userId
                             };
                         }
                         return m;
                     });
-                    
+
                     const newPrizes = gameData.prizes.map(p => {
                         if (p.colorName === selectedPrize.colorName) {
                             return { ...p, allocated: true };
@@ -835,8 +795,8 @@
                     });
 
                     await firebase.setDoc(docRef, {
-                        ...gameData, 
-                        teamMembers: newMembers, 
+                        ...gameData,
+                        teamMembers: newMembers,
                         prizes: newPrizes,
                         lastUpdated: new Date().toISOString()
                     });
@@ -846,27 +806,28 @@
                     generateBtn.disabled = false;
                     generateBtn.textContent = '💰 လှည့်မည်';
                 }
-            }, 3500); 
+            }, 3500);
         }
-        
+
         function displayResultModal(memberName, resultColor) {
             const prize = gameData.prizes.find(p => p.colorName === resultColor);
             const colorHex = prize?.hex || '#ccc';
-            
+
             modalMemberNameEl.textContent = `ဂုဏ်ယူပါတယ်, ${memberName}!`;
             modalResultColorDisplayEl.textContent = resultColor;
             modalResultColorDisplayEl.style.backgroundColor = colorHex;
-            
+
             // Set download button handler
             modalDownloadBtn.onclick = () => downloadResultAsPNG(memberName, resultColor, colorHex);
-            
+
             modalOverlayEl.classList.add('active');
         }
-        
+
         function closeResultModal() {
-             modalOverlayEl.classList.remove('active');
-             stopConfetti();
-             spinnerSelectEl.dispatchEvent(new Event('change'));
+            modalOverlayEl.classList.remove('active');
+            stopConfetti();
+            // Manually trigger onchange to refresh UI state after closing modal
+            spinnerSelectEl.dispatchEvent(new Event('change'));
         }
 
         // --- PNG Download Logic ---
@@ -875,41 +836,41 @@
             canvas.width = 400;
             canvas.height = 250;
             const ctx = canvas.getContext('2d');
-            
-            const padaukFont = 'Pyidaungsu Text, Padauk, sans-serif'; // Use Pyidaungsu
-            const appTitle = gameData.appTitle || 'အဖွဲ့အမည်';
 
-            ctx.fillStyle = '#FFFBEB'; 
+            const padaukFont = 'Padauk, sans-serif';
+            const appTitle = gameData.appTitle || 'မုန့်ဖိုးဝေစနစ်';
+
+            ctx.fillStyle = '#FFFBEB';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = THEMES[gameData.theme].borderColor || '#FBBF24'; 
+            ctx.strokeStyle = THEMES[gameData.theme].borderColor || '#FBBF24';
             ctx.lineWidth = 8;
             ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
 
-            ctx.fillStyle = '#4B5563'; 
-            ctx.font = `20px ${padaukFont}`; 
+            ctx.fillStyle = '#4B5563';
+            ctx.font = `20px ${padaukFont}`;
             ctx.textAlign = 'center';
-            ctx.fillText(`🎉 ${appTitle} မုန့်ဖိုးဝေစနစ် 🎉`, canvas.width / 2, 40); 
+            ctx.fillText(`🎉 ${appTitle} မုန့်ဖိုးဝေစနစ် 🎉`, canvas.width / 2, 40);
 
-            ctx.fillStyle = '#1F2937'; 
-            ctx.font = `24px ${padaukFont}`; 
+            ctx.fillStyle = '#1F2937';
+            ctx.font = `24px ${padaukFont}`;
             ctx.fillText(`ဂုဏ်ယူပါတယ်, ${memberName}`, canvas.width / 2, 85);
-            
+
             ctx.fillStyle = colorHex;
             ctx.fillRect(50, 100, canvas.width - 100, 50);
-            
+
             const contrastColor = getContrastColor(rgbToHex(colorHex));
-            ctx.fillStyle = contrastColor; 
-            ctx.font = `30px ${padaukFont}`; 
+            ctx.fillStyle = contrastColor;
+            ctx.font = `30px ${padaukFont}`;
             ctx.fillText(resultColor, canvas.width / 2, 137);
 
-            ctx.fillStyle = '#6B7280'; 
-            ctx.font = `14px ${padaukFont}`; 
+            ctx.fillStyle = '#6B7280';
+            ctx.font = `14px ${padaukFont}`;
             ctx.fillText('ဒီဆုပမာဏလေးက သင့်အတွက် ကံကောင်းခြင်းတွေ ယူဆောင်လာပါစေ။', canvas.width / 2, 185);
-            
-            ctx.font = `16px ${padaukFont}`; 
-            ctx.fillStyle = '#059669'; 
-            ctx.fillText('🎁 သီတင်းကျွတ်လက်ဆောင် 🎁', canvas.width / 2, 225); 
+
+            ctx.font = `16px ${padaukFont}`;
+            ctx.fillStyle = '#059669';
+            ctx.fillText('🎁 သီတင်းကျွတ်လက်ဆောင် 🎁', canvas.width / 2, 225);
 
             const dataURL = canvas.toDataURL('image/png');
             const a = document.createElement('a');
@@ -964,22 +925,22 @@
                 confettiCtx.restore();
             }
         }
-        
+
         function getConfettiColors() {
-             const colors = ['#FFD700', '#D81B60', '#00A86B', '#4169E1', '#FF8C00', '#8A2BE2'];
-             return colors[Math.floor(Math.random() * colors.length)];
+            const colors = ['#FFD700', '#D81B60', '#00A86B', '#4169E1', '#FF8C00', '#8A2BE2'];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
 
         function spawnConfetti() {
             const centerX = confettiCanvas.width / 2;
             const centerY = confettiCanvas.height / 2;
             const count = 50;
-            
+
             for (let i = 0; i < count; i++) {
                 confettiPieces.push(new Confetto(
-                    centerX, 
-                    centerY, 
-                    Math.random() * 5 + 2, 
+                    centerX,
+                    centerY,
+                    Math.random() * 5 + 2,
                     getConfettiColors()
                 ));
             }
@@ -987,12 +948,12 @@
 
         function animateConfetti() {
             confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-            
+
             for (let i = confettiPieces.length - 1; i >= 0; i--) {
                 const confetto = confettiPieces[i];
                 confetto.update();
                 confetto.draw();
-                
+
                 if (confetto.opacity <= 0 || confetto.y > confettiCanvas.height) {
                     confettiPieces.splice(i, 1);
                 }
@@ -1010,53 +971,80 @@
             confettiCanvas.style.display = 'block';
             resizeCanvas();
             spawnConfetti();
-            
+
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             animateConfetti();
-            
+
             // Stop confetti after a short duration
             setTimeout(stopConfetti, 2500);
         }
 
         function stopConfetti() {
-             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-             // Let remaining pieces fall off screen then hide canvas
-             if (confettiPieces.length === 0) {
-                 confettiCanvas.style.display = 'none';
-             } else {
-                 // Allow pieces to finish falling
-                 setTimeout(() => confettiCanvas.style.display = 'none', 1000);
-             }
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            // Let remaining pieces fall off screen then hide canvas
+            if (confettiPieces.length === 0) {
+                confettiCanvas.style.display = 'none';
+            } else {
+                // Allow pieces to finish falling
+                setTimeout(() => confettiCanvas.style.display = 'none', 1000);
+            }
         }
 
         // --- Admin Panel Functions ---
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                loginSectionEl.classList.add('hidden');
-                adminPanelEl.classList.remove('hidden');
-                loginErrorEl.classList.add('hidden');
-                updateAdminPanelForms();
-                renderAdminResultsTable();
-                calculateAndDisplayPrizeSum();
-            } else {
-                loginErrorEl.textContent = 'အသုံးပြုသူအမည် (သို့) လျှို့ဝှက်နံပါတ် မမှန်ကန်ပါ။';
+            // Error message ကို အရင်ဖျောက်ထားပါ
+            loginErrorEl.classList.add('hidden');
+
+            // Login စစ်ဆေးမှုကို Netlify Function (Server) ဆီ POST Request ပို့လိုက်ခြင်း
+            try {
+                const response = await fetch('/.netlify/functions/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }) // Username, Password ကို Server ကို ပို့လိုက်ခြင်း
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // 200 OK နဲ့ Server က success ပြန်ပို့ရင် Login အောင်မြင်
+
+                    // Server က ပေးလိုက်တဲ့ Token ကို Browser ရဲ့ LocalStorage မှာ သိမ်းပါ
+                    localStorage.setItem('adminToken', data.token);
+
+                    // UI ကို Admin Panel ဖွင့်ဖို့ ပြင်ဆင်ပါ
+                    loginSectionEl.classList.add('hidden');
+                    adminPanelEl.classList.remove('hidden');
+                    loginErrorEl.classList.add('hidden');
+
+                    // Admin Panel အတွက် လိုအပ်တဲ့ data တွေ ပြန်ခေါ်ပြီး ပြသပါ
+                    updateAdminPanelForms();
+                    renderAdminResultsTable();
+                    calculateAndDisplayPrizeSum();
+
+                } else {
+                    // Login မအောင်မြင်ရင် Error ပြပါ (Server Function က ပေးလိုက်တဲ့ message ကို ပြပါ)
+                    loginErrorEl.textContent = data.message || 'ဝင်ရောက်ခွင့် မပြုပါ';
+                    loginErrorEl.classList.remove('hidden');
+                }
+
+            } catch (e) {
+                console.error("Login API Error:", e);
+                loginErrorEl.textContent = '❌ စနစ်ချိတ်ဆက်မှု အမှားဖြစ်ပွားပါသည်။';
                 loginErrorEl.classList.remove('hidden');
             }
         }
 
         function updateAdminPanelForms() {
-            if (!gameData || !gameData.teamMembers || !gameData.prizes) return;
-
-            appTitleInputEl.value = gameData.appTitle; 
+            appTitleInputEl.value = gameData.appTitle;
             document.getElementById('total-amount').value = gameData.totalAmount;
             document.getElementById('min-amount').value = gameData.minAmount;
             document.getElementById('max-amount').value = gameData.maxAmount;
-            
+
             appThemeSelectEl.innerHTML = '';
             Object.keys(THEMES).forEach(key => {
                 const option = document.createElement('option');
@@ -1070,10 +1058,10 @@
             appThemeSelectEl.onchange = handlePrizeInput;
 
             const membersArray = gameData.teamMembers.map(m => m.name);
-            memberCountEl.textContent = membersArray.length; 
-            
+            memberCountEl.textContent = membersArray.length;
+
             document.getElementById('team-members').value = membersArray.join('\n');
-            
+
             renderPrizeSetupForms();
             calculateAndDisplayPrizeSum();
         }
@@ -1083,14 +1071,8 @@
             min = parseInt(min) || 0;
             max = parseInt(max) || 0;
             const N = prizes.length;
-            
+
             if (N === 0) return [];
-            
-            // --- Zero Amount Mode ---
-            if (T === 0) {
-                 return prizes.map(prize => ({ ...prize, amount: 0 }));
-            }
-            // --- END Zero Amount Mode ---
 
             const T_min = N * min;
             const T_max = N * max;
@@ -1098,25 +1080,25 @@
             if (T < T_min) T = T_min;
             if (T > T_max) T = T_max;
             if (min > max) max = min;
-            
+
             const prizesCopy = [...prizes];
             let amounts = Array(N).fill(min);
             let remaining = T - T_min;
-            
+
             for (let i = 0; i < N && remaining > 0; i++) {
                 const extraCap = max - amounts[i];
                 const maxAllocatable = Math.min(remaining, extraCap);
-                
+
                 let randomExtra = 0;
                 if (maxAllocatable > 0) {
                     randomExtra = Math.floor(Math.random() * (maxAllocatable * 0.5 + 1));
                 }
-                
+
                 amounts[i] += randomExtra;
                 remaining -= randomExtra;
             }
 
-            for (let i = 0; remaining > 0 && i < 100; i++) { 
+            for (let i = 0; remaining > 0 && i < 100; i++) {
                 for (let j = 0; j < N && remaining > 0; j++) {
                     if (amounts[j] < max) {
                         amounts[j]++;
@@ -1124,85 +1106,50 @@
                     }
                 }
             }
-            
-            // Return updated prizes while preserving all original color/hex properties
-            return prizes.map((prize, index) => ({
-                colorName: prize.colorName, 
-                hex: prize.hex, 
-                allocated: prize.allocated, 
-                amount: amounts[index] || min 
+
+            return prizesCopy.map((prize, index) => ({
+                ...prize,
+                amount: amounts[index] || min
             }));
         }
 
         function renderPrizeSetupForms() {
-            if (!gameData || !gameData.prizes) return;
-
             prizeSetupContainerEl.innerHTML = '';
-            
+
             const prizeCount = gameData.prizes.length;
             prizeCountDisplayEl.textContent = prizeCount;
 
-            const currentTotal = parseInt(document.getElementById('total-amount').value);
-            const currentMin = parseInt(document.getElementById('min-amount').value);
-            const currentMax = parseInt(document.getElementById('max-amount').value);
-
-            // Use current gameData.prizes for names and hexes when recalculating amounts
-            const currentPrizesState = gameData.prizes.map(p => ({ 
-                colorName: p.colorName, 
-                hex: p.hex, 
-                allocated: p.allocated 
-            }));
-
-            let recalculatedPrizes = calculateRandomPrizes(
-                currentPrizesState, 
-                currentTotal, 
-                currentMin, 
-                currentMax
+            gameData.prizes = calculateRandomPrizes(
+                gameData.prizes,
+                document.getElementById('total-amount').value,
+                document.getElementById('min-amount').value,
+                document.getElementById('max-amount').value
             );
-            
-            gameData.prizes = recalculatedPrizes;
-            const isZeroMode = currentTotal === 0;
-
 
             gameData.prizes.forEach((prize, index) => {
                 const div = document.createElement('div');
                 div.className = 'grid grid-cols-5 gap-2 items-center prize-input-row';
                 div.setAttribute('data-index', index);
-                
-                const colorInput = `<input type="color" data-index="${index}" data-field="hex" class="col-span-1 w-full h-8 rounded-md" value="${prize.hex}">`;
-                
-                const nameInput = `<input type="text" data-index="${index}" data-field="colorName" placeholder="အရောင်အမည်" class="col-span-2 p-1 text-sm rounded-md" value="${prize.colorName}">`;
-                
-                const amountValue = isZeroMode ? 0 : prize.amount;
-                const amountClasses = isZeroMode ? 'bg-gray-300 text-gray-700' : 'bg-gray-200 text-red-700';
 
-                const amountInput = `<input type="number" data-index="${index}" data-field="amount" placeholder="ပမာဏ MMK" class="col-span-2 p-1 text-sm rounded-md ${amountClasses} font-bold" value="${amountValue}" readonly>`;
+                const colorInput = `<input type="color" data-index="${index}" class="col-span-1 w-full h-8 rounded-md" value="${prize.hex}">`;
+                const nameInput = `<input type="text" data-index="${index}" data-field="colorName" placeholder="အရောင်အမည်" class="col-span-2 p-1 text-sm rounded-md" value="${prize.colorName}">`;
+                const amountInput = `<input type="number" data-index="${index}" data-field="amount" placeholder="ပမာဏ MMK" class="col-span-2 p-1 text-sm rounded-md bg-gray-200 text-red-700 font-bold" value="${prize.amount}" readonly>`;
 
                 div.innerHTML = `${colorInput}${nameInput}${amountInput}`;
                 prizeSetupContainerEl.appendChild(div);
             });
-            
-            // Re-attach listeners for the dynamically created inputs
+
             prizeSetupContainerEl.querySelectorAll('input[type="color"], input[type="text"]').forEach(input => {
                 input.addEventListener('input', handlePrizeInput);
             });
         }
-        
-        function calculateAndDisplayPrizeSum() {
-            if (!gameData) return;
 
-            const totalBudget = parseInt(document.getElementById('total-amount').value) || gameData.totalAmount;
-            
+        function calculateAndDisplayPrizeSum() {
             const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
-            
+            const totalBudget = parseInt(document.getElementById('total-amount').value) || gameData.totalAmount;
+
             prizeSumStatusEl.textContent = `ဆုပမာဏ စုစုပေါင်း: ${prizeSum.toLocaleString()} MMK (ဘတ်ဂျက်: ${totalBudget.toLocaleString()} MMK)`;
             prizeSumStatusEl.classList.remove('hidden');
-
-            if (totalBudget === 0) {
-                 prizeSumStatusEl.classList.remove('text-red-600');
-                 prizeSumStatusEl.classList.add('text-green-600');
-                 return;
-            }
 
             if (prizeSum === totalBudget) {
                 prizeSumStatusEl.classList.remove('text-red-600');
@@ -1212,51 +1159,40 @@
                 prizeSumStatusEl.classList.add('text-red-600');
             }
         }
-        
+
         function handlePrizeInput(event) {
-            if (!gameData) return;
-            
             const input = event.target;
             const index = parseInt(input.getAttribute('data-index'));
             const field = input.getAttribute('data-field');
-            const changedInputId = event.target.id;
-            
+
             if (index >= 0 && index < gameData.prizes.length) {
-                if (field === 'hex') {
+                if (input.type === 'color') {
                     gameData.prizes[index].hex = input.value;
                 } else if (field) {
-                     gameData.prizes[index][field] = input.value;
+                    gameData.prizes[index][field] = input.value;
                 }
             }
-            
+
             const newMembersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
-            memberCountEl.textContent = newMembersCount; 
-            
+            memberCountEl.textContent = newMembersCount;
+
             if (newMembersCount !== gameData.prizes.length) {
-                 adminMessageEl.textContent = `သတိ! အဖွဲ့ဝင်ဦးရေ (${newMembersCount}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ၎င်းတို့သည် တူညီနေရပါမည်။`;
-                 adminMessageEl.classList.remove('hidden', 'text-green-600');
-                 adminMessageEl.classList.add('text-red-600');
+                adminMessageEl.textContent = `သတိ! အဖွဲ့ဝင်ဦးရေ (${newMembersCount}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ၎င်းတို့သည် တူညီနေရပါမည်။`;
+                adminMessageEl.classList.remove('hidden', 'text-green-600');
+                adminMessageEl.classList.add('text-red-600');
             } else {
-                 adminMessageEl.classList.add('hidden');
+                adminMessageEl.classList.add('hidden');
             }
-            
-            
+
+            const changedInputId = event.target.id;
             if (['total-amount', 'min-amount', 'max-amount', 'app-title-input', 'app-theme-select'].includes(changedInputId)) {
-                if (changedInputId !== 'app-theme-select') {
-                    renderPrizeSetupForms(); 
-                }
-                
-                if (changedInputId === 'app-theme-select') {
-                    applyTheme(input.value);
-                }
+                renderPrizeSetupForms();
             }
-            
+
             calculateAndDisplayPrizeSum();
         }
-        
-        function addPrizeField() {
-            if (!gameData) return;
 
+        function addPrizeField() {
             const membersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
 
             if (gameData.prizes.length >= membersCount) {
@@ -1264,19 +1200,16 @@
                 document.getElementById('team-members').value += `\n${newMemberName}`;
                 memberCountEl.textContent = gameData.prizes.length + 1;
             }
-            
+
             const prizeCount = gameData.prizes.length;
-            // Preserve existing names when adding new members/prizes
-            const newPrize = { colorName: DEFAULT_PRIZES[prizeCount]?.colorName || `ဆုအရောင် ${prizeCount + 1}`, hex: DEFAULT_PRIZES[prizeCount]?.hex || "#CCCCCC", amount: 1000, allocated: false };
+            const newPrize = { colorName: `ဆုအသစ် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
             gameData.prizes.push(newPrize);
-            
-            renderPrizeSetupForms(); 
+
+            renderPrizeSetupForms();
             calculateAndDisplayPrizeSum();
         }
 
         function removeLastPrizeField() {
-            if (!gameData) return;
-
             const membersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
 
             if (gameData.prizes.length > 1) {
@@ -1285,7 +1218,7 @@
                 displayAdminMessage("❌ အနည်းဆုံး ဆု ၁ ခုတော့ ထားရှိရပါမည်။", 'red');
                 return;
             }
-            
+
             if (gameData.prizes.length < membersCount) {
                 const membersTextarea = document.getElementById('team-members');
                 const lines = membersTextarea.value.split('\n').filter(n => n.trim() !== '').length;
@@ -1295,75 +1228,94 @@
                 }
             }
 
-            renderPrizeSetupForms(); 
+            renderPrizeSetupForms();
             calculateAndDisplayPrizeSum();
         }
 
-        async function resetAllGameData() {
-            if (!gameData) return;
+        async function resetMemberSpin(memberIndex) {
+            if (!gameData || memberIndex < 0 || memberIndex >= gameData.teamMembers.length) return;
 
-            if (!confirm("သေချာပါသလား? အဖွဲ့ဝင်အားလုံး၏ ရလဒ်များနှင့် ဆုခွဲဝေမှုများကို အစကတည်းက ပြန်လည်စတင်ပါမည်။")) {
-                return;
-            }
-            
+            const member = gameData.teamMembers[memberIndex];
+            if (!member.spun) return;
+
             const docRef = firebase.doc(db, GAME_DOC_PATH);
 
-            const initialMembers = gameData.teamMembers.map(m => ({
-                name: m.name,
-                spun: false,
-                resultColor: null,
-                resultAmount: gameData.totalAmount === 0 ? 0 : null,
-                spinnerId: null
-            }));
+            const newPrizes = gameData.prizes.map(p => {
+                if (p.colorName === member.resultColor) {
+                    return { ...p, allocated: false };
+                }
+                return p;
+            });
 
-            // Reset allocated status on all prizes
-            const resetPrizes = gameData.prizes.map(p => ({
-                ...p,
-                allocated: false,
-                amount: gameData.totalAmount === 0 ? 0 : p.amount // Keep calculated amount if not zero mode
-            }));
-            
+            const newMembers = gameData.teamMembers.map((m, i) => {
+                if (i === memberIndex) {
+                    return { ...m, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
+                }
+                return m;
+            });
+
             try {
                 await firebase.setDoc(docRef, {
                     ...gameData,
-                    teamMembers: initialMembers,
-                    prizes: resetPrizes,
+                    teamMembers: newMembers,
+                    prizes: newPrizes,
                     lastUpdated: new Date().toISOString()
                 });
-                displayAdminMessage('✅ ဂိမ်းအခြေအနေ အားလုံးကို အောင်မြင်စွာ ပြန်လည်စတင်လိုက်ပါပြီ။', 'green');
             } catch (e) {
-                console.error("Failed to reset all game data:", e);
-                displayAdminMessage('❌ အားလုံး ပြန်လည်စတင်ရန် မအောင်မြင်ပါ။', 'red');
+                console.error("Failed to reset member spin:", e);
+                displayAdminMessage(`❌ ${member.name} ၏ ရလဒ် ပြန်လည်သတ်မှတ်ရန် မအောင်မြင်ပါ။`, 'red');
             }
         }
 
-
         function renderAdminResultsTable() {
-            if (!gameData || !gameData.teamMembers) return;
-            
             adminResultsTableEl.innerHTML = '';
-            
+
             const totalAmount = gameData.totalAmount;
             let currentTotal = 0;
 
-            gameData.teamMembers.forEach((member) => {
+            gameData.teamMembers.forEach((member, index) => {
                 const tr = document.createElement('tr');
                 tr.className = member.spun ? 'bg-green-50/50 border-b border-gray-100' : 'bg-white border-b border-gray-100';
-                
-                let amountDisplay = member.resultAmount !== null ? member.resultAmount.toLocaleString() : '-';
+
+                let amountDisplay = member.resultAmount ? member.resultAmount.toLocaleString() : '-';
                 let colorDisplay = member.resultColor ? `<span class="font-semibold" style="color: ${gameData.prizes.find(p => p.colorName === member.resultColor)?.hex || '#333'}">${member.resultColor}</span>` : '-';
                 let status = member.spun ? '✅ လှည့်ပြီး' : '⏳ မလှည့်ရသေး';
 
-                if (member.resultAmount !== null) {
+                if (member.resultAmount) {
                     currentTotal += member.resultAmount;
                 }
-                
+
+                const resetButton = document.createElement('button');
+                resetButton.className = 'text-xs py-1 px-2 rounded font-semibold transition-colors';
+                resetButton.setAttribute('data-index', index);
+
+                if (member.spun) {
+                    resetButton.textContent = 'ပြန်ပြင်မည်';
+                    resetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
+                    resetButton.addEventListener('click', (e) => {
+                        const idx = parseInt(e.target.getAttribute('data-index'));
+                        if (confirm(`သေချာပါသလား? ${gameData.teamMembers[idx].name} ရဲ့ ရလဒ်ကို ပြန်ဖျက်ပြီး ဆုကို ပြန်ထည့်ပေးပါမည်။`)) {
+                            resetMemberSpin(idx);
+                        }
+                    });
+                } else {
+                    resetButton.textContent = 'N/A';
+                    resetButton.disabled = true;
+                    resetButton.classList.add('bg-gray-200', 'text-gray-500');
+                }
+
+                const resetTd = document.createElement('td');
+                resetTd.className = 'p-3 text-center';
+                resetTd.appendChild(resetButton);
+
+
                 tr.innerHTML = `
                     <td class="p-3 font-semibold">${member.name}</td>
                     <td class="p-3 text-center text-sm ${member.spun ? 'text-green-700' : 'text-yellow-700'}">${status}</td>
                     <td class="p-3 text-center text-sm">${colorDisplay}</td>
                     <td class="p-3 text-right font-mono font-bold text-red-700">${amountDisplay}</td>
                 `;
+                tr.appendChild(resetTd);
                 adminResultsTableEl.appendChild(tr);
             });
 
@@ -1374,13 +1326,13 @@
                 <td class="p-3 text-center">${gameData.teamMembers.filter(m => m.spun).length} / ${gameData.teamMembers.length}</td>
                 <td class="p-3 text-center"></td>
                 <td class="p-3 text-right">${currentTotal.toLocaleString()} / ${totalAmount.toLocaleString()} MMK</td>
+                <td class="p-3 text-center"></td>
             `;
             adminResultsTableEl.appendChild(totalRow);
         }
 
         async function handleAdminSave(event) {
             event.preventDefault();
-            if (!gameData) return;
 
             const newTitle = appTitleInputEl.value;
             const newTotal = parseInt(document.getElementById('total-amount').value);
@@ -1392,55 +1344,34 @@
 
             const totalMinRequired = membersArray.length * newMin;
             const totalMaxRequired = membersArray.length * newMax;
-            
+
             const prizeCount = gameData.prizes.length;
-            
-            const isZeroMode = newTotal === 0;
-            
+
             if (membersArray.length !== prizeCount) {
                 displayAdminMessage(`❌ အဖွဲ့ဝင်ဦးရေ (${membersArray.length}) နှင့် ဆုဦးရေ (${prizeCount}) မတူညီပါ။ ၎င်းတို့သည် တူညီနေရပါမည်။`, 'red');
                 return;
             }
 
-            if (!isZeroMode && (newTotal < totalMinRequired || newTotal > totalMaxRequired)) {
+            if (newTotal < totalMinRequired || newTotal > totalMaxRequired) {
                 displayAdminMessage(`❌ မမှန်ကန်ပါ။ စုစုပေါင်းငွေပမာဏသည် ${membersArray.length} ယောက်အတွက် ${totalMinRequired.toLocaleString()} MMK မှ ${totalMaxRequired.toLocaleString()} MMK အတွင်း ဖြစ်ရပါမည်။`, 'red');
                 return;
             }
-            
+
             const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
-            if (!isZeroMode && prizeSum !== newTotal) {
-                 displayAdminMessage(`❌ သိမ်းဆည်းရန် အမှား။ ဆုပမာဏ စုစုပေါင်း (${prizeSum.toLocaleString()} MMK) သည် စုစုပေါင်းငွေ (${newTotal.toLocaleString()} MMK) နှင့် မတူညီပါ။`, 'red');
-                 return;
+            if (prizeSum !== newTotal) {
+                displayAdminMessage(`❌ သိမ်းဆည်းရန် အမှား။ ဆုပမာဏ စုစုပေါင်း (${prizeSum.toLocaleString()} MMK) သည် စုစုပေါင်းငွေ (${newTotal.toLocaleString()} MMK) နှင့် မတူညီပါ။`, 'red');
+                return;
             }
-            
-            // Check if members or total amount changed significantly enough to warrant a reset
-            const oldMembers = gameData.teamMembers.map(m => m.name).join('\n');
-            const membersChanged = oldMembers !== newMembersText.trim();
-            const totalChanged = gameData.totalAmount !== newTotal;
-            
-            let membersNeedReset = membersChanged || totalChanged;
 
             const updatedMembers = membersArray.map(name => {
-                 const existing = gameData.teamMembers.find(m => m.name === name);
-                 
-                 if (existing && !membersNeedReset && !isZeroMode && existing.resultAmount !== 0) {
-                     return existing; // Keep existing spin status and result if not resetting
-                 }
-                 
-                 return { 
-                     name: name, 
-                     spun: false, 
-                     resultColor: null, 
-                     resultAmount: isZeroMode ? 0 : null, 
-                     spinnerId: null 
-                 };
+                return { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
             });
-            
+
             const newPrizes = gameData.prizes.map(p => ({
                 colorName: p.colorName,
                 hex: p.hex,
-                amount: isZeroMode ? 0 : parseInt(p.amount),
-                allocated: membersNeedReset ? false : p.allocated 
+                amount: parseInt(p.amount),
+                allocated: false
             }));
 
 
@@ -1450,7 +1381,7 @@
                 minAmount: newMin,
                 maxAmount: newMax,
                 theme: newTheme,
-                teamMembers: updatedMembers, 
+                teamMembers: updatedMembers,
                 prizes: newPrizes,
                 lastUpdated: new Date().toISOString()
             };
@@ -1458,19 +1389,13 @@
             try {
                 const docRef = firebase.doc(db, GAME_DOC_PATH);
                 await firebase.setDoc(docRef, newData);
-                
-                if (membersNeedReset) {
-                    displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီး၊ ဂိမ်းအခြေအနေကို ပြောင်းလဲမှုများကြောင့် ပြန်လည်သတ်မှတ်လိုက်ပါပြီ။', 'green');
-                } else {
-                    displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။', 'green');
-                }
-                
+                displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီး၊ ဂိမ်းအခြေအနေကို ပြန်လည်သတ်မှတ်လိုက်ပါပြီ။', 'green');
             } catch (e) {
                 console.error("Firestore Save Error:", e);
                 displayAdminMessage('❌ သိမ်းဆည်းရန် အမှားရှိနေပါသည်။', 'red');
             }
         }
-        
+
         function displayAdminMessage(message, type) {
             adminMessageEl.textContent = message;
             adminMessageEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
@@ -1482,7 +1407,7 @@
 
         function toggleLogin() {
             loginSectionEl.classList.toggle('hidden');
-            adminPanelEl.classList.add('hidden'); 
+            adminPanelEl.classList.add('hidden');
             loginErrorEl.classList.add('hidden');
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
@@ -1492,9 +1417,9 @@
             adminPanelEl.classList.add('hidden');
             loginSectionEl.classList.add('hidden');
             adminMessageEl.classList.add('hidden');
-            renderGameUI(); 
+            renderGameUI();
         }
-        
+
         function getContrastColor(hex) {
             if (!hex || hex.indexOf('#') === -1) return '#000000';
             const r = parseInt(hex.substring(1, 3), 16);
@@ -1503,7 +1428,7 @@
             const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
             return (yiq >= 128) ? '#000000' : '#ffffff';
         }
-        
+
         function rgbToHex(rgb) {
             if (!rgb || rgb.indexOf('rgb') === -1) return '#000000';
             const components = rgb.match(/\d+/g);
@@ -1514,7 +1439,7 @@
 
         // --- Event Listeners and Initialization ---
         window.addEventListener('resize', resizeCanvas);
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             initFirebase();
             generateBtn.addEventListener('click', handleSpin);
@@ -1522,47 +1447,39 @@
             adminForm.addEventListener('submit', handleAdminSave);
             adminLoginBtn.addEventListener('click', toggleLogin);
             closeAdminBtn.addEventListener('click', closeAdminPanel);
-            
+
             modalCloseBtn.addEventListener('click', closeResultModal);
-            
+
             addPrizeBtn.addEventListener('click', addPrizeField);
             removePrizeBtn.addEventListener('click', removeLastPrizeField);
-            globalResetBtn.addEventListener('click', resetAllGameData); // Global Reset Listener
-            
-            // Listeners for auto-recalculate/update
+
             document.getElementById('total-amount').addEventListener('input', handlePrizeInput);
             document.getElementById('min-amount').addEventListener('input', handlePrizeInput);
             document.getElementById('max-amount').addEventListener('input', handlePrizeInput);
             appTitleInputEl.addEventListener('input', handlePrizeInput);
             appThemeSelectEl.addEventListener('change', handlePrizeInput);
-            
+
             document.getElementById('team-members').addEventListener('input', (event) => {
                 const newMembersCount = event.target.value.split('\n').filter(n => n.trim() !== '').length;
                 memberCountEl.textContent = newMembersCount;
-                
+
                 if (gameData) {
-                    // Update prize count based on member count automatically
                     while (gameData.prizes.length < newMembersCount) {
                         const prizeCount = gameData.prizes.length;
-                        // Use default prize name/hex if available, otherwise generic
-                        const newPrize = { 
-                            colorName: DEFAULT_PRIZES[prizeCount]?.colorName || `ဆုအရောင် ${prizeCount + 1}`, 
-                            hex: DEFAULT_PRIZES[prizeCount]?.hex || "#CCCCCC", 
-                            amount: 1000, 
-                            allocated: false 
-                        };
+                        const newPrize = { colorName: `ဆုအသစ် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
                         gameData.prizes.push(newPrize);
                     }
                     while (gameData.prizes.length > newMembersCount) {
                         gameData.prizes.pop();
                     }
-                    renderPrizeSetupForms(); 
+                    renderPrizeSetupForms();
                 }
-                
+
                 calculateAndDisplayPrizeSum();
             });
         });
 
     </script>
 </body>
+
 </html>
