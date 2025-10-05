@@ -82,7 +82,7 @@
 
         <header class="text-center mb-8">
             <h1 id="main-title" class="text-3xl md:text-4xl font-bold text-yellow-900">🏮 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🏮</h1>
-            <p id="main-subtitle" class="text-gray-600 mt-2">Testing Team အတွက် တစ်ဦးချင်းဆုမဲစနစ်</p>
+            <p id="main-subtitle" class="text-gray-600 mt-2">အဖွဲ့၀◌င်များအတွက် တစ်ဦးချင်းဆုမဲစနစ်</p>
         </header>
 
         <main class="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[500px] relative">
@@ -300,7 +300,7 @@
 
         // --- Default Data ---
         const defaultData = {
-            appTitle: 'Testing Team', // New default title
+            appTitle: 'Testing Team', 
             totalAmount: 30000,
             minAmount: 3000,
             maxAmount: 7000,
@@ -354,7 +354,7 @@
         const mainTitleEl = document.getElementById('main-title');
         const mainSubtitleEl = document.getElementById('main-subtitle');
         const appTitleInputEl = document.getElementById('app-title-input');
-        const resultWishEl = document.getElementById('result-wish'); // New DOM element
+        const resultWishEl = document.getElementById('result-wish'); 
 
         // --- Tone.js Globals ---
         let spinnerSynth, resultSynth;
@@ -443,7 +443,6 @@
             firebase.onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     gameData = docSnap.data();
-                    // Ensure new fields exist on old data
                     if (gameData.appTitle === undefined) gameData.appTitle = defaultData.appTitle;
                     if (gameData.theme === undefined) gameData.theme = defaultData.theme;
                     renderGameUI();
@@ -489,7 +488,7 @@
         function renderGameUI() {
             if (!gameData) return;
             
-            updateHeaderAndWish(); // Update titles and the wish message
+            updateHeaderAndWish(); 
             applyTheme(gameData.theme);
 
             loadingScreenEl.classList.add('hidden');
@@ -506,7 +505,7 @@
         
         function updateHeaderAndWish() {
             const title = gameData.appTitle || 'မုန့်ဖိုးဝေစနစ်';
-            mainTitleEl.innerHTML = `🏮 ${title} 🏮`;
+            mainTitleEl.innerHTML = `🏮 ${title} မုန့်ဖိုးဝေစနစ် 🏮`;
             mainSubtitleEl.textContent = `အဖွဲ့၀◌င်များအတွက် တစ်ဦးချင်းဆုမဲစနစ်`;
             resultWishEl.textContent = 'ဒီဆုပမာဏလေးက သင့်အတွက် ကံကောင်းခြင်းတွေ ယူဆောင်လာပါစေ။';
         }
@@ -644,7 +643,10 @@
                 stopSpinSound(); 
                 playResultSound(); 
 
+                // --- UI Update immediately after animation ---
                 spinStatusEl.textContent = "✅ ရလဒ်ထွက်ပေါ်ပါပြီ။";
+                wheelEl.style.transition = 'none'; 
+                // wheelEl.style.transform = ''; // Keep final rotation for visual effect until next spin
                 
                 try {
                     const docRef = firebase.doc(db, GAME_DOC_PATH);
@@ -676,6 +678,7 @@
                         lastUpdated: new Date().toISOString()
                     });
                     
+                    // The onSnapshot listener handles the final UI reset/re-enable
                     displayIndividualResult({ name: selectedName, resultColor: selectedPrize.colorName });
 
                 } catch (error) {
@@ -708,47 +711,38 @@
             const padaukFont = 'Padauk, sans-serif';
             const appTitle = gameData.appTitle || 'မုန့်ဖိုးဝေစနစ်';
 
-            // 1. Background (Light Yellow/Gold)
             ctx.fillStyle = '#FFFBEB'; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Border/Accent
             ctx.strokeStyle = THEMES[gameData.theme].borderColor || '#FBBF24'; 
             ctx.lineWidth = 8;
             ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
 
-            // 3. Text Styling (Title)
             ctx.fillStyle = '#4B5563'; 
             ctx.font = `20px ${padaukFont}`; 
             ctx.textAlign = 'center';
-            ctx.fillText(`🎉 ${appTitle} 🎉`, canvas.width / 2, 40);
+            ctx.fillText(`🎉 ${appTitle} မုန့်ဖိုးဝေစနစ် 🎉`, canvas.width / 2, 40);
 
-            // 4. Congratulations
             ctx.fillStyle = '#1F2937'; 
             ctx.font = `24px ${padaukFont}`; 
             ctx.fillText(`ဂုဏ်ယူပါတယ်, ${memberName}`, canvas.width / 2, 85);
             
-            // 5. Color Display Box
             ctx.fillStyle = colorHex;
             ctx.fillRect(50, 100, canvas.width - 100, 50);
             
-            // Draw contrast text on the color box
             const contrastColor = getContrastColor(rgbToHex(colorHex));
             ctx.fillStyle = contrastColor; 
             ctx.font = `30px ${padaukFont}`; 
             ctx.fillText(resultColor, canvas.width / 2, 137);
 
-            // 6. Wish/Context (Updated)
             ctx.fillStyle = '#6B7280'; 
             ctx.font = `14px ${padaukFont}`; 
             ctx.fillText('ဒီဆုပမာဏလေးက သင့်အတွက် ကံကောင်းခြင်းတွေ ယူဆောင်လာပါစေ။', canvas.width / 2, 185);
             
-            // 7. Footer
             ctx.font = `16px ${padaukFont}`; 
             ctx.fillStyle = '#059669'; 
-            ctx.fillText('🎁 သီတင်းကျွတ် မုန့်ဖိုးဝေစနစ် 🎁', canvas.width / 2, 225);
+            ctx.fillText('🎁 သီတင်းကျွတ်လက်ဆောင် 🎁', canvas.width / 2, 225);
 
-            // 8. Trigger Download
             const dataURL = canvas.toDataURL('image/png');
             const a = document.createElement('a');
             a.href = dataURL;
@@ -778,12 +772,11 @@
         }
         
         function updateAdminPanelForms() {
-            appTitleInputEl.value = gameData.appTitle; // Load app title
+            appTitleInputEl.value = gameData.appTitle; 
             document.getElementById('total-amount').value = gameData.totalAmount;
             document.getElementById('min-amount').value = gameData.minAmount;
             document.getElementById('max-amount').value = gameData.maxAmount;
             
-            // Populate Theme Select
             appThemeSelectEl.innerHTML = '';
             Object.keys(THEMES).forEach(key => {
                 const option = document.createElement('option');
@@ -925,7 +918,6 @@
             
             const changedInputId = event.target.id;
             if (['total-amount', 'min-amount', 'max-amount', 'app-title-input', 'app-theme-select'].includes(changedInputId)) {
-                // If core parameters change, re-render and recalculate prizes
                 renderPrizeSetupForms(); 
             }
             
@@ -961,10 +953,11 @@
             
             if (gameData.prizes.length < membersCount) {
                 const membersTextarea = document.getElementById('team-members');
-                const lines = membersTextarea.value.split('\n').filter(n => n.trim() !== '');
-                lines.pop(); 
-                membersTextarea.value = lines.join('\n');
-                memberCountEl.textContent = lines.length;
+                const lines = membersTextarea.value.split('\n').filter(n => n.trim() !== '').length;
+                if (lines > 0) {
+                    membersTextarea.value = membersTextarea.value.split('\n').slice(0, -1).join('\n');
+                    memberCountEl.textContent = lines - 1;
+                }
             }
 
             renderPrizeSetupForms(); 
@@ -1000,6 +993,7 @@
                     prizes: newPrizes,
                     lastUpdated: new Date().toISOString()
                 });
+                // The onSnapshot listener will fire here, causing the admin table to update in real-time.
             } catch (e) {
                 console.error("Failed to reset member spin:", e);
                 displayAdminMessage(`❌ ${member.name} ၏ ရလဒ် ပြန်လည်သတ်မှတ်ရန် မအောင်မြင်ပါ။`, 'red');
