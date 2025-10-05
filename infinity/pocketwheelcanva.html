@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Money Wheel</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .prize-info {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 0 auto 30px;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #fff;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            transition: transform 3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .wheel-segment {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: 100% 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #fff;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .controls {
+            margin-bottom: 30px;
+        }
+
+        .name-selector {
+            margin-bottom: 20px;
+        }
+
+        select {
+            padding: 12px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 25px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .spin-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .spin-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .spin-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reset-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .results {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-top: 20px;
+        }
+
+        .winner-announcement {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .used-names {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .used-names h3 {
+            margin-top: 0;
+            color: #ffd700;
+        }
+
+        .used-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .used-name {
+            background: rgba(255,255,255,0.3);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .wheel-container {
+                width: 300px;
+                height: 300px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .wheel-segment {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎰 Pocket Money Wheel 🎰</h1>
+        
+        <div class="prize-info" style="display: none;">
+            <h2>Total Prize Pool: 30,000 MMK</h2>
+            <p>Win between 3,000 - 10,000 MMK • One spin per person</p>
+            <p><strong>Remaining: <span id="remaining-amount">30,000</span> MMK</strong></p>
+        </div>
+
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" id="wheel">
+                <!-- Segments will be generated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="name-selector">
+                <select id="name-select">
+                    <option value="">Select your name</option>
+                    <option value="TTM">TTM</option>
+                    <option value="TWN">TWN</option>
+                    <option value="NHHM">NHHM</option>
+                    <option value="EMT">EMT</option>
+                    <option value="YHA">YHA</option>
+                    <option value="LLO">LLO</option>
+                    <option value="PDL">PDL</option>
+                    <option value="ZMO">ZMO</option>
+                    <option value="kmt">kmt (Testing)</option>
+                </select>
+            </div>
+            
+            <button class="spin-btn" id="spin-btn" disabled>🎯 SPIN THE WHEEL!</button>
+            <button class="reset-btn" id="reset-btn" style="margin-left: 15px; display: none;">🔄 RESET</button>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <div class="winner-announcement" id="winner-text"></div>
+            <div id="prize-text"></div>
+        </div>
+
+        <div class="used-names" id="used-names" style="display: none;">
+            <h3>Already Played:</h3>
+            <div class="used-list" id="used-list"></div>
+        </div>
+
+        <!-- Password Modal -->
+        <div id="password-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; color: #333; max-width: 400px; width: 90%;">
+                <h3 style="margin-top: 0; color: #333;">🔒 Admin Access Required</h3>
+                <p>Enter password to reset the game:</p>
+                <input type="password" id="password-input" placeholder="Enter password" style="padding: 12px; border: 2px solid #ddd; border-radius: 8px; width: 200px; font-size: 16px; margin: 10px 0;">
+                <br>
+                <button id="password-submit" style="background: #28a745; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; margin: 5px;">Submit</button>
+                <button id="password-cancel" style="background: #dc3545; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; margin: 5px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const names = ['TTM', 'TWN', 'NHHM', 'EMT', 'YHA', 'LLO', 'PDL', 'ZMO', 'kmt'];
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd', '#e74c3c'];
+        const minPrize = 3000;
+        const maxPrize = 10000;
+        let totalPrize = 30000;
+        let usedNames = [];
+        let isSpinning = false;
+
+        const wheel = document.getElementById('wheel');
+        const nameSelect = document.getElementById('name-select');
+        const spinBtn = document.getElementById('spin-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const results = document.getElementById('results');
+        const winnerText = document.getElementById('winner-text');
+        const prizeText = document.getElementById('prize-text');
+        const remainingAmount = document.getElementById('remaining-amount');
+        const usedNamesDiv = document.getElementById('used-names');
+        const usedList = document.getElementById('used-list');
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const passwordSubmit = document.getElementById('password-submit');
+        const passwordCancel = document.getElementById('password-cancel');
+        const adminPassword = 'Thadingyut2025';
+
+        // Create wheel segments
+        function createWheel() {
+            wheel.innerHTML = '';
+            const segmentAngle = 360 / names.length;
+            
+            names.forEach((name, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'wheel-segment';
+                segment.style.backgroundColor = colors[index];
+                segment.style.transform = `rotate(${index * segmentAngle}deg)`;
+                segment.textContent = name;
+                
+                // Position text properly
+                const textAngle = segmentAngle / 2;
+                segment.style.clipPath = `polygon(0 0, ${Math.cos(segmentAngle * Math.PI / 180) * 100}% ${Math.sin(segmentAngle * Math.PI / 180) * 100}%, 0 100%)`;
+                
+                wheel.appendChild(segment);
+            });
+        }
+
+        // Enable/disable spin button based on name selection
+        nameSelect.addEventListener('change', function() {
+            const selectedName = this.value;
+            if (selectedName && !usedNames.includes(selectedName)) {
+                spinBtn.disabled = false;
+            } else {
+                spinBtn.disabled = true;
+            }
+            
+            // Show reset button only for kmt user
+            if (selectedName === 'kmt') {
+                resetBtn.style.display = 'inline-block';
+            } else {
+                resetBtn.style.display = 'none';
+            }
+        });
+
+        // Spin the wheel
+        spinBtn.addEventListener('click', function() {
+            const selectedName = nameSelect.value;
+            if (!selectedName || usedNames.includes(selectedName) || isSpinning) return;
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+            results.style.display = 'none';
+
+            // Generate random prize amount
+            const prizeAmount = Math.floor(Math.random() * (maxPrize - minPrize + 1)) + minPrize;
+            
+            // Calculate spin rotation (multiple full rotations + final position)
+            const spins = 5 + Math.random() * 5; // 5-10 full rotations
+            const finalRotation = spins * 360;
+            
+            // Apply rotation
+            wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+            // Show results after spin animation
+            setTimeout(() => {
+                // Add to used names
+                usedNames.push(selectedName);
+                totalPrize -= prizeAmount;
+
+                // Update UI
+                winnerText.textContent = `🎉 ${selectedName} WINS! 🎉`;
+                prizeText.innerHTML = `<strong>Prize: ${prizeAmount.toLocaleString()} MMK</strong>`;
+                remainingAmount.textContent = totalPrize.toLocaleString();
+                
+                results.style.display = 'block';
+                updateUsedNames();
+                updateNameSelect();
+                
+                isSpinning = false;
+
+                // Check if all prizes are distributed
+                if (usedNames.length === names.length) {
+                    spinBtn.textContent = '🎊 All prizes claimed!';
+                    nameSelect.disabled = true;
+                } else {
+                    nameSelect.value = '';
+                }
+            }, 3000);
+        });
+
+        // Update used names display
+        function updateUsedNames() {
+            if (usedNames.length > 0) {
+                usedNamesDiv.style.display = 'block';
+                usedList.innerHTML = usedNames.map(name => 
+                    `<span class="used-name">${name}</span>`
+                ).join('');
+            }
+        }
+
+        // Update name selector to remove used names
+        function updateNameSelect() {
+            const options = nameSelect.querySelectorAll('option');
+            options.forEach(option => {
+                if (usedNames.includes(option.value)) {
+                    option.disabled = true;
+                    option.textContent += ' ✓';
+                }
+            });
+        }
+
+        // Reset game with password protection
+        resetBtn.addEventListener('click', function() {
+            passwordModal.style.display = 'flex';
+            passwordInput.value = '';
+            passwordInput.focus();
+        });
+
+        // Password modal handlers
+        passwordSubmit.addEventListener('click', function() {
+            if (passwordInput.value === adminPassword) {
+                // Reset all variables
+                totalPrize = 30000;
+                usedNames = [];
+                isSpinning = false;
+                
+                // Reset UI
+                nameSelect.value = '';
+                nameSelect.disabled = false;
+                spinBtn.disabled = true;
+                spinBtn.textContent = '🎯 SPIN THE WHEEL!';
+                results.style.display = 'none';
+                usedNamesDiv.style.display = 'none';
+                remainingAmount.textContent = totalPrize.toLocaleString();
+                resetBtn.style.display = 'none';
+                
+                // Reset wheel rotation
+                wheel.style.transform = 'rotate(0deg)';
+                
+                // Reset name selector options
+                const options = nameSelect.querySelectorAll('option');
+                options.forEach(option => {
+                    option.disabled = false;
+                    option.textContent = option.textContent.replace(' ✓', '');
+                });
+                
+                passwordModal.style.display = 'none';
+            } else {
+                alert('❌ Incorrect password!');
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        });
+
+        passwordCancel.addEventListener('click', function() {
+            passwordModal.style.display = 'none';
+            passwordInput.value = '';
+        });
+
+        // Allow Enter key to submit password
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                passwordSubmit.click();
+            }
+        });
+
+        // Initialize wheel
+        createWheel();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'989b8dc7a3ea5f03',t:'MTc1OTY1Mjk5My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

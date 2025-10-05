@@ -22,7 +22,7 @@
     
     <!-- Chosen Palette: Festive Gold/Red with Clean Neutrals -->
     <!-- Application Structure Plan: Three main views controlled by JS state: 1. Admin Panel (Secured Login/Config/Results Table). 2. Loading/Setup Screen. 3. Public Game View (Member Selection / Wheel Spin). Uses Firestore for shared state management of the game parameters, available prizes, and individual member spin results. The wheel segments are dynamically generated based on available (unallocated) prizes/colors. -->
-    <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing colors only. Admin Results Table (HTML/Tailwind) showing all hidden data. Interaction: Secure login to admin panel. Member selection to identify the spinner. Atomic update to Firestore on successful spin. Justification: Firestore is necessary for multi-user state persistence and real-time result tracking. Hiding the amount on the wheel meets the user's secrecy requirement. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling. -->
+    <!-- Visualization & Content Choices: Goal: Multi-user sequential spinning with hidden prize amounts. Viz/Presentation Method: Spin Wheel (CSS/JS animation) showing colors only. Admin Results Table (HTML/Tailwind) showing all hidden data. Interaction: Secure login to admin panel. Member selection to identify the spinner. Atomic update to Firestore on successful spin. Admin Reset button for individual member corrections. Justification: Firestore is necessary for multi-user state persistence and real-time result tracking. Hiding the amount on the wheel meets the user's secrecy requirement. Library/Method: Vanilla JavaScript + Firestore for state/logic, CSS animations for the wheel effect, Tailwind CSS for all styling. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -230,17 +230,28 @@
         const ADMIN_PASSWORD = 'Thadingyut2025';
         
         // --- Firebase Globals & Setup ---
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // ဤသည်မှာ သင့်၏ Firestore Configuration ဖြစ်သည်
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ1ZtAu_S0VBZRtyIjuKHfBalHmaeu2aw",
+            authDomain: "kmtechspaceship.firebaseapp.com",
+            projectId: "kmtechspaceship",
+            storageBucket: "kmtechspaceship.firebasestorage.app",
+            messagingSenderId: "494150534835",
+            appId: "1:494150534835:web:d2b654e04d7b52ca1912c6",
+            measurementId: "G-CWJ6BXN5TY"
+        };
         
+        // Netlify/GitHub Deployment အတွက် Canvas placeholders များကို ဖယ်ရှားလိုက်သည်။
+        const appIdForPath = firebaseConfig.projectId; // Firestore path အတွက် Project ID (kmtechspaceship) ကို အသုံးပြုသည်။
+        const initialAuthToken = null; // Netlify တွင် Custom Auth Token မရှိပါ
+
         let db, auth;
         let userId = null;
         let gameData = null;
-        let unsavedPrizeCount = 0;
 
-        // Firestore Path
-        const GAME_DOC_PATH = `artifacts/${appId}/public/data/thadingyut_game/config`;
+        // Firestore Path (Project ID ကို အသုံးပြုထားပါသည်)
+        const GAME_DOC_PATH = `artifacts/${appIdForPath}/public/data/thadingyut_game/config`;
+
 
         // --- Default Data ---
         const defaultData = {
@@ -269,7 +280,6 @@
 
         // --- DOM Elements ---
         const loadingScreenEl = document.getElementById('loading-screen');
-        const loadingStatusEl = document.getElementById('loading-status');
         const loginSectionEl = document.getElementById('login-section');
         const adminPanelEl = document.getElementById('admin-panel');
         const gameViewEl = document.getElementById('game-view');
@@ -294,19 +304,19 @@
 
         async function initFirebase() {
             try {
-                if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+                if (firebaseConfig && firebaseConfig.projectId) {
                     const app = firebase.initializeApp(firebaseConfig);
                     db = firebase.getFirestore(app);
                     auth = firebase.getAuth(app);
                     firebase.setLogLevel('error'); 
 
-                    loadingStatusEl.textContent = "အသုံးပြုသူ စစ်ဆေးနေပါသည်...";
-
                     // Auth login
                     if (initialAuthToken) {
                         await firebase.signInWithCustomToken(auth, initialAuthToken);
                     } else {
-                        await firebase.signInAnonymously(auth);
+                        // Netlify/GitHub deployment requires anonymous sign-in 
+                        // to get request.auth != null for the security rules to work.
+                        await firebase.signInAnonymously(auth); 
                     }
                     userId = auth.currentUser.uid;
                     
@@ -314,11 +324,15 @@
                     setupGameListener();
 
                 } else {
-                    throw new Error("Firebase configuration is missing.");
+                    // Fallback to show error if config is truly missing
+                    console.error("Firebase configuration is missing or incomplete.");
                 }
             } catch (e) {
                 console.error("Firebase Initialization Error:", e);
-                loadingStatusEl.textContent = `❌ စနစ်ချိတ်ဆက်မှု အမှား။ (${e.message || 'Error'})`;
+                // Hide loading screen but show a message
+                loadingScreenEl.classList.add('hidden');
+                gameViewEl.classList.remove('hidden'); 
+                spinStatusEl.textContent = `❌ စနစ်ချိတ်ဆက်မှု အမှား။ (${e.message || 'Error'})`;
             }
         }
         
@@ -335,12 +349,10 @@
                 }
             }, (error) => {
                 console.error("Firestore Listener Error:", error);
-                loadingStatusEl.textContent = "❌ ဒေတာများကို ရယူရာတွင် အမှားဖြစ်ပွားပါသည်။";
             });
         }
         
         async function initializeDefaultGame() {
-            loadingStatusEl.textContent = "ဒေတာအသစ် ဖန်တီးနေပါသည်...";
             const members = defaultData.teamMembers.split('\n').filter(n => n.trim() !== '');
             const initialMembers = members.map(name => ({
                 name: name,
@@ -364,7 +376,6 @@
                 await firebase.setDoc(docRef, initialData);
             } catch (e) {
                 console.error("Failed to initialize default game data:", e);
-                loadingStatusEl.textContent = "❌ ဒေတာအစပျိုးခြင်း အမှား။";
             }
         }
 
@@ -407,19 +418,16 @@
                 segment.style.transform = `rotate(${index * anglePerSegment}deg) skewY(-${90 - anglePerSegment}deg)`;
                 
                 // Add color name overlay (optional, but good for context)
-                const label = document.createElement('div');
-                label.className = 'absolute top-1/2 left-1/2 text-xs font-semibold whitespace-nowrap overflow-hidden';
-                label.style.color = getContrastColor(prize.hex); 
-                label.style.transform = `rotate(${anglePerSegment / 2}deg) translate(-50%, -100%) rotate(90deg)`;
-                label.textContent = prize.colorName;
-
-                // Simple segment styling for visual clarity
                 const innerSegment = document.createElement('div');
                 innerSegment.className = 'absolute top-0 left-0 w-full h-full';
                 innerSegment.style.transform = `skewY(${90 - anglePerSegment}deg) rotate(0deg)`;
                 innerSegment.style.paddingLeft = '50%';
-                innerSegment.style.fontSize = '10px';
+                innerSegment.style.textAlign = 'center';
+                innerSegment.style.fontSize = '12px';
+                innerSegment.style.fontWeight = 'bold';
                 innerSegment.style.color = getContrastColor(prize.hex);
+                innerSegment.style.lineHeight = '64px';
+                innerSegment.textContent = prize.colorName;
 
                 segment.appendChild(innerSegment);
                 wheelEl.appendChild(segment);
@@ -434,7 +442,9 @@
             resetInfoEl.classList.add('hidden');
             
             let selectedMember = null;
-
+            let firstUnspunName = null;
+            
+            // Find the first unspun member to auto-select
             members.forEach(member => {
                 const option = document.createElement('option');
                 option.value = member.name;
@@ -442,9 +452,25 @@
                 if (member.spun) {
                     option.textContent += ' (လှည့်ပြီး)';
                     option.disabled = true;
+                } else if (!firstUnspunName) {
+                    firstUnspunName = member.name;
                 }
                 spinnerSelectEl.appendChild(option);
             });
+            
+            // Auto-select and setup initial state
+            if (firstUnspunName) {
+                spinnerSelectEl.value = firstUnspunName;
+                selectedMember = members.find(m => m.name === firstUnspunName);
+                if (selectedMember && !selectedMember.spun) {
+                    generateBtn.disabled = false;
+                    spinStatusEl.textContent = `${selectedMember.name} အသင့်ဖြစ်ပါပြီ။`;
+                }
+            } else if (members.every(m => m.spun)) {
+                 generateBtn.disabled = true;
+                 spinStatusEl.textContent = "ဂိမ်းပြီးဆုံးပါပြီ။";
+                 resetInfoEl.classList.remove('hidden');
+            }
             
             spinnerSelectEl.onchange = function() {
                 const name = spinnerSelectEl.value;
@@ -461,12 +487,6 @@
                 } else {
                     generateBtn.disabled = true;
                     spinStatusEl.textContent = "";
-                }
-                
-                if (members.every(m => m.spun)) {
-                     generateBtn.disabled = true;
-                     spinStatusEl.textContent = "ဂိမ်းပြီးဆုံးပါပြီ။";
-                     resetInfoEl.classList.remove('hidden');
                 }
             };
         }
@@ -492,15 +512,13 @@
             const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
             const selectedPrize = availablePrizes[prizeIndex];
             
-            const allPrizes = gameData.prizes;
-            const targetPrizeIndex = allPrizes.findIndex(p => p.colorName === selectedPrize.colorName);
+            const allPrizes = gameData.prizes.filter(p => !p.allocated);
+            const targetPrizeIndex = allPrizes.findIndex(p => p.colorName === selectedPrize.colorName); // Index in the current, smaller wheel
             
             const numSegments = allPrizes.length; 
             const anglePerSegment = 360 / numSegments;
             
             // Calculate a random target rotation angle
-            // We want it to land in the targetPrizeIndex segment
-            // 3000-4000 total degrees for a good spin
             const baseRotations = 360 * 10; 
             const targetAngle = targetPrizeIndex * anglePerSegment + (anglePerSegment / 2); // Center of the segment
             const offset = Math.random() * (anglePerSegment * 0.8) - (anglePerSegment * 0.4); // Small random offset within the segment
@@ -611,25 +629,26 @@
                 prizeSetupContainerEl.appendChild(div);
             });
             
-            unsavedPrizeCount = gameData.prizes.length;
-            
             // Add listeners for color/amount changes (to update temp data)
             prizeSetupContainerEl.querySelectorAll('input').forEach(input => {
                 input.addEventListener('input', () => {
                     const index = parseInt(input.getAttribute('data-index'));
                     const field = input.getAttribute('data-field');
 
-                    if (input.type === 'color') {
-                        gameData.prizes[index].hex = input.value;
-                    } else if (field) {
-                         gameData.prizes[index][field] = field === 'amount' ? parseInt(input.value) : input.value;
+                    // Check if index is valid and update temp gameData object
+                    if (index >= 0 && index < gameData.prizes.length) {
+                        if (input.type === 'color') {
+                            gameData.prizes[index].hex = input.value;
+                        } else if (field) {
+                             gameData.prizes[index][field] = field === 'amount' ? parseInt(input.value) : input.value;
+                        }
                     }
                     
-                    // Simple validation for 9 prizes
+                    // Simple validation check
                     const newMembersCount = document.getElementById('team-members').value.split('\n').filter(n => n.trim() !== '').length;
-                    unsavedPrizeCount = newMembersCount;
+                    
                     if (newMembersCount !== gameData.prizes.length) {
-                         adminMessageEl.textContent = `သတိ! အဖွဲ့ဝင်ဦးရေ (${newMembersCount}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။`;
+                         adminMessageEl.textContent = `သတိ! အဖွဲ့ဝင်ဦးရေ (${newMembersCount}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ဆုများကို ၉ ခုတိတိ ပြင်ဆင်ပါ။`;
                          adminMessageEl.classList.remove('hidden');
                          adminMessageEl.classList.add('text-red-600');
                     } else {
@@ -639,7 +658,7 @@
             });
         }
         
-        // --- NEW: Function to reset a specific member's spin ---
+        // --- Function to reset a specific member's spin ---
         async function resetMemberSpin(memberIndex) {
             if (!gameData || memberIndex < 0 || memberIndex >= gameData.teamMembers.length) return;
 
@@ -706,6 +725,7 @@
                     resetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white');
                     resetButton.addEventListener('click', (e) => {
                         const idx = parseInt(e.target.getAttribute('data-index'));
+                        // IMPORTANT: Use standard confirmation dialog as custom modals are complex for this context
                         if (confirm(`သေချာပါသလား? ${gameData.teamMembers[idx].name} ရဲ့ ရလဒ်ကို ပြန်ဖျက်ပြီး ဆုကို ပြန်ထည့်ပေးပါမည်။`)) {
                             resetMemberSpin(idx);
                         }
@@ -764,7 +784,7 @@
             
             // Validation 2: Prize Count Check
             if (membersArray.length !== gameData.prizes.length) {
-                displayAdminMessage(`❌ အဖွဲ့ဝင်ဦးရေ (${membersArray.length}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ဆုများကို ပြန်လည်သတ်မှတ်ပါ။`, 'red');
+                displayAdminMessage(`❌ အဖွဲ့ဝင်ဦးရေ (${membersArray.length}) နှင့် ဆုဦးရေ (${gameData.prizes.length}) မတူညီပါ။ ဆုများကို ၉ ခုတိတိ ပြင်ဆင်ပါ။`, 'red');
                 return;
             }
 
@@ -779,8 +799,8 @@
             const oldMembers = gameData.teamMembers;
             const updatedMembers = membersArray.map(name => {
                 const existing = oldMembers.find(m => m.name === name);
-                // If name exists, keep previous status, otherwise reset
-                return existing ? existing : { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
+                // Reset all status for new configuration to ensure a fresh game start
+                return { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
             });
             
             // Create a new prize array based on current form values, resetting allocation status
@@ -833,7 +853,7 @@
             loginSectionEl.classList.add('hidden');
             adminMessageEl.classList.add('hidden');
             // Re-render the wheel in case the user edited but didn't save
-            renderWheel(); 
+            renderGameUI(); 
         }
         
         // --- Helper Function ---
