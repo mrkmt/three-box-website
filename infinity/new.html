@@ -208,19 +208,19 @@
                             <label for="total-amount" class="block text-sm font-medium text-gray-700">စုစုပေါင်းငွေပမာဏ
                                 (MMK)</label>
                             <input type="number" id="total-amount"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="1000" required>
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="0" required>
                         </div>
                         <div>
                             <label for="min-amount" class="block text-sm font-medium text-gray-700">တစ်ဦးလျှင် အနည်းဆုံး
                                 (MMK)</label>
                             <input type="number" id="min-amount"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="100" required>
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="0" required>
                         </div>
                         <div class="col-span-1">
                             <label for="max-amount" class="block text-sm font-medium text-gray-700">တစ်ဦးလျှင် အများဆုံး
                                 (MMK)</label>
                             <input type="number" id="max-amount"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="100" required>
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="0" required>
                         </div>
                         <div class="col-span-1">
                             <label class="block text-sm font-medium text-gray-700">လက်ရှိအဖွဲ့ဝင်ဦးရေ</label>
@@ -355,6 +355,7 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script type="module">
+
         
         // --- Game Lockout Time (Default - Oct 6, 2025, 19:00:00 GMT+0630) ---
         const DEFAULT_LOCKOUT_TIMESTAMP = 1728217800000; 
@@ -584,6 +585,8 @@
                     gameData = docSnap.data();
                     if (gameData.appTitle === undefined) gameData.appTitle = defaultData.appTitle;
                     if (gameData.theme === undefined) gameData.theme = defaultData.theme;
+                    
+                    // Update Lock Timestamp from Firestore
                     if (gameData.lockoutTime) {
                         lockTimestamp = new Date(gameData.lockoutTime).getTime();
                     } else {
@@ -1131,7 +1134,6 @@
             }
         }
 
-
         function updateAdminPanelForms() {
             appTitleInputEl.value = gameData.appTitle; 
             document.getElementById('total-amount').value = gameData.totalAmount;
@@ -1170,6 +1172,12 @@
             
             if (N === 0) return [];
             
+            // --- NEW: Zero Amount Mode ---
+            if (T === 0) {
+                 return prizes.map(prize => ({ ...prize, amount: 0 }));
+            }
+            // --- END NEW ---
+
             const T_min = N * min;
             const T_max = N * max;
 
@@ -1215,12 +1223,20 @@
             const prizeCount = gameData.prizes.length;
             prizeCountDisplayEl.textContent = prizeCount;
 
+            // Recalculate prizes based on current form inputs, especially Total Amount for 0 check
+            const currentTotal = parseInt(document.getElementById('total-amount').value);
+            const currentMin = parseInt(document.getElementById('min-amount').value);
+            const currentMax = parseInt(document.getElementById('max-amount').value);
+
             gameData.prizes = calculateRandomPrizes(
                 gameData.prizes, 
-                document.getElementById('total-amount').value, 
-                document.getElementById('min-amount').value, 
-                document.getElementById('max-amount').value
+                currentTotal, 
+                currentMin, 
+                currentMax
             );
+            
+            const isZeroMode = currentTotal === 0;
+
 
             gameData.prizes.forEach((prize, index) => {
                 const div = document.createElement('div');
@@ -1229,7 +1245,12 @@
                 
                 const colorInput = `<input type="color" data-index="${index}" class="col-span-1 w-full h-8 rounded-md" value="${prize.hex}">`;
                 const nameInput = `<input type="text" data-index="${index}" data-field="colorName" placeholder="အရောင်အမည်" class="col-span-2 p-1 text-sm rounded-md" value="${prize.colorName}">`;
-                const amountInput = `<input type="number" data-index="${index}" data-field="amount" placeholder="ပမာဏ MMK" class="col-span-2 p-1 text-sm rounded-md bg-gray-200 text-red-700 font-bold" value="${prize.amount}" readonly>`;
+                
+                // Amount input field is always 0 if Total Amount is 0
+                const amountValue = isZeroMode ? 0 : prize.amount;
+                const amountClasses = isZeroMode ? 'bg-gray-300 text-gray-700' : 'bg-gray-200 text-red-700';
+
+                const amountInput = `<input type="number" data-index="${index}" data-field="amount" placeholder="ပမာဏ MMK" class="col-span-2 p-1 text-sm rounded-md ${amountClasses} font-bold" value="${amountValue}" readonly>`;
 
                 div.innerHTML = `${colorInput}${nameInput}${amountInput}`;
                 prizeSetupContainerEl.appendChild(div);
@@ -1241,11 +1262,21 @@
         }
         
         function calculateAndDisplayPrizeSum() {
-            const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
             const totalBudget = parseInt(document.getElementById('total-amount').value) || gameData.totalAmount;
-
+            
+            // Recalculate sum based on current gameData.prizes (which are already updated by renderPrizeSetupForms if needed)
+            const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
+            
             prizeSumStatusEl.textContent = `ဆုပမာဏ စုစုပေါင်း: ${prizeSum.toLocaleString()} MMK (ဘတ်ဂျက်: ${totalBudget.toLocaleString()} MMK)`;
             prizeSumStatusEl.classList.remove('hidden');
+
+            // --- NEW: Zero Mode Check for Status ---
+            if (totalBudget === 0) {
+                 prizeSumStatusEl.classList.remove('text-red-600');
+                 prizeSumStatusEl.classList.add('text-green-600');
+                 return;
+            }
+            // --- END NEW ---
 
             if (prizeSum === totalBudget) {
                 prizeSumStatusEl.classList.remove('text-red-600');
@@ -1260,7 +1291,8 @@
             const input = event.target;
             const index = parseInt(input.getAttribute('data-index'));
             const field = input.getAttribute('data-field');
-
+            const changedInputId = event.target.id;
+            
             if (index >= 0 && index < gameData.prizes.length) {
                 if (input.type === 'color') {
                     gameData.prizes[index].hex = input.value;
@@ -1280,9 +1312,10 @@
                  adminMessageEl.classList.add('hidden');
             }
             
-            const changedInputId = event.target.id;
+            
             if (['total-amount', 'min-amount', 'max-amount', 'app-title-input', 'app-theme-select', 'lock-datetime-input'].includes(changedInputId)) {
                 if (changedInputId !== 'lock-datetime-input' && changedInputId !== 'app-theme-select') {
+                    // Recalculate and render prize amounts on budget change
                     renderPrizeSetupForms(); 
                 }
             }
@@ -1445,19 +1478,22 @@
             const totalMaxRequired = membersArray.length * newMax;
             
             const prizeCount = gameData.prizes.length;
-
+            
+            // --- NEW: Zero Mode Logic for Validation ---
+            const isZeroMode = newTotal === 0;
+            
             if (membersArray.length !== prizeCount) {
                 displayAdminMessage(`❌ အဖွဲ့ဝင်ဦးရေ (${membersArray.length}) နှင့် ဆုဦးရေ (${prizeCount}) မတူညီပါ။ ၎င်းတို့သည် တူညီနေရပါမည်။`, 'red');
                 return;
             }
 
-            if (newTotal < totalMinRequired || newTotal > totalMaxRequired) {
+            if (!isZeroMode && (newTotal < totalMinRequired || newTotal > totalMaxRequired)) {
                 displayAdminMessage(`❌ မမှန်ကန်ပါ။ စုစုပေါင်းငွေပမာဏသည် ${membersArray.length} ယောက်အတွက် ${totalMinRequired.toLocaleString()} MMK မှ ${totalMaxRequired.toLocaleString()} MMK အတွင်း ဖြစ်ရပါမည်။`, 'red');
                 return;
             }
             
             const prizeSum = gameData.prizes.reduce((sum, p) => sum + parseInt(p.amount), 0);
-            if (prizeSum !== newTotal) {
+            if (!isZeroMode && prizeSum !== newTotal) {
                  displayAdminMessage(`❌ သိမ်းဆည်းရန် အမှား။ ဆုပမာဏ စုစုပေါင်း (${prizeSum.toLocaleString()} MMK) သည် စုစုပေါင်းငွေ (${newTotal.toLocaleString()} MMK) နှင့် မတူညီပါ။`, 'red');
                  return;
             }
@@ -1470,21 +1506,39 @@
             // Keep spun status for existing members, reset if member list changes size or content (simple reset)
             const oldMembers = gameData.teamMembers.map(m => m.name);
             let membersNeedReset = (membersArray.length !== oldMembers.length) || membersArray.some((name, index) => name !== oldMembers[index]);
+            
+            // --- Reset Logic for Zero Mode ---
+            if (isZeroMode && gameData.totalAmount !== 0) {
+                 membersNeedReset = true; // Force reset all if switching to Zero Mode
+            } else if (gameData.totalAmount === 0 && newTotal !== 0) {
+                 membersNeedReset = true; // Force reset all if switching OUT of Zero Mode
+            }
+
 
             const updatedMembers = membersArray.map(name => {
                  const existing = gameData.teamMembers.find(m => m.name === name);
                  if (existing && !membersNeedReset) {
                      return existing; // Keep existing spin status and result
                  }
-                 return { name: name, spun: false, resultColor: null, resultAmount: null, spinnerId: null };
+                 // If reset needed, or new member, force reset status and set amount based on new total
+                 return { 
+                     name: name, 
+                     spun: false, 
+                     resultColor: null, 
+                     resultAmount: isZeroMode ? 0 : null, 
+                     spinnerId: null 
+                 };
             });
             
             const newPrizes = gameData.prizes.map(p => ({
                 colorName: p.colorName,
                 hex: p.hex,
-                amount: parseInt(p.amount),
+                // Ensure prize amount is 0 if in Zero Mode, otherwise use calculated amount
+                amount: isZeroMode ? 0 : parseInt(p.amount),
                 allocated: membersNeedReset ? false : p.allocated // Reset allocated status if member list changed
             }));
+            
+            // --- END NEW ---
 
 
             const newData = {
@@ -1504,7 +1558,7 @@
                 await firebase.setDoc(docRef, newData);
                 
                 if (membersNeedReset) {
-                    displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီး၊ ဂိမ်းအခြေအနေကို (အဖွဲ့၀◌င်စာရင်း ပြောင်းလဲမှုကြောင့်) ပြန်လည်သတ်မှတ်လိုက်ပါပြီ။', 'green');
+                    displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီး၊ ဂိမ်းအခြေအနေကို ပြောင်းလဲမှုများကြောင့် ပြန်လည်သတ်မှတ်လိုက်ပါပြီ။', 'green');
                 } else {
                     displayAdminMessage('✅ အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။', 'green');
                 }
@@ -1585,6 +1639,7 @@
                 memberCountEl.textContent = newMembersCount;
                 
                 if (gameData) {
+                    // Update prize count based on member count automatically
                     while (gameData.prizes.length < newMembersCount) {
                         const prizeCount = gameData.prizes.length;
                         const newPrize = { colorName: `ဆုအသစ် ${prizeCount + 1}`, hex: "#CCCCCC", amount: 1000, allocated: false };
