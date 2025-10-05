@@ -355,9 +355,6 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script type="module">
-        // --- Hardcoded Authentication Credentials (Client-Side Check Required for Single File) ---
-        const ADMIN_USERNAME = 'kmt';
-        const ADMIN_PASSWORD = 'Thadingyut2025'; 
         
         // --- Game Lockout Time (Default - Oct 6, 2025, 19:00:00 GMT+0630) ---
         const DEFAULT_LOCKOUT_TIMESTAMP = 1728217800000; 
@@ -1087,24 +1084,53 @@
 
         // --- Admin Panel Functions ---
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Reverting to client-side check (removed Netlify function fetch)
-            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                loginSectionEl.classList.add('hidden');
-                adminPanelEl.classList.remove('hidden');
-                loginErrorEl.classList.add('hidden');
-                updateAdminPanelForms();
-                renderAdminResultsTable();
-                calculateAndDisplayPrizeSum();
-            } else {
-                loginErrorEl.textContent = 'အသုံးပြုသူအမည် (သို့) လျှို့ဝှက်နံပါတ် မမှန်ကန်ပါ။';
+            // Error message ကို အရင်ဖျောက်ထားပါ
+            loginErrorEl.classList.add('hidden');
+
+            // Login စစ်ဆေးမှုကို Netlify Function (Server) ဆီ POST Request ပို့လိုက်ခြင်း
+            try {
+                const response = await fetch('/.netlify/functions/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }) // Username, Password ကို Server ကို ပို့လိုက်ခြင်း
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // 200 OK နဲ့ Server က success ပြန်ပို့ရင် Login အောင်မြင်
+
+                    // Server က ပေးလိုက်တဲ့ Token ကို Browser ရဲ့ LocalStorage မှာ သိမ်းပါ
+                    localStorage.setItem('adminToken', data.token);
+
+                    // UI ကို Admin Panel ဖွင့်ဖို့ ပြင်ဆင်ပါ
+                    loginSectionEl.classList.add('hidden');
+                    adminPanelEl.classList.remove('hidden');
+                    loginErrorEl.classList.add('hidden');
+
+                    // Admin Panel အတွက် လိုအပ်တဲ့ data တွေ ပြန်ခေါ်ပြီး ပြသပါ
+                    updateAdminPanelForms();
+                    renderAdminResultsTable();
+                    calculateAndDisplayPrizeSum();
+
+                } else {
+                    // Login မအောင်မြင်ရင် Error ပြပါ (Server Function က ပေးလိုက်တဲ့ message ကို ပြပါ)
+                    loginErrorEl.textContent = data.message || 'ဝင်ရောက်ခွင့် မပြုပါ';
+                    loginErrorEl.classList.remove('hidden');
+                }
+
+            } catch (e) {
+                console.error("Login API Error:", e);
+                loginErrorEl.textContent = '❌ စနစ်ချိတ်ဆက်မှု အမှားဖြစ်ပွားပါသည်။';
                 loginErrorEl.classList.remove('hidden');
             }
         }
+
 
         function updateAdminPanelForms() {
             appTitleInputEl.value = gameData.appTitle; 
