@@ -4,24 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>KM Tech Status - ဝန်ဆောင်မှု အခြေအနေ</title>
-
     <style>
-        /* HTML BODY အတွက် Base Styles */
+        /* Base Styles (ယခင်အတိုင်း) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f0f2f5;
-            /* အနောက်ခံ အရောင်နု */
         }
 
-        /* Status Container (Layout) */
         .status-container {
             max-width: 1200px;
             margin: 40px auto;
-            /* အပေါ်အောက် ခြားပြီး အလယ်မှာ နေရာချသည် */
             padding: 20px;
             background: white;
             border-radius: 12px;
@@ -29,30 +24,36 @@
             text-align: center;
         }
 
-        /* ခေါင်းစဉ် Styles */
         h1 {
             color: #1a1a1a;
             margin-bottom: 10px;
         }
 
-        /* iframe Styles */
+        /* iframe Styles ကို တစ်ခုတည်း သုံးပြီး height ကို လိုအပ်သလို ပြောင်းပါ */
         .uptime-kuma-iframe {
             width: 100%;
-            height: 850px;
-            /* မျက်နှာပြင် အများစုကို ဖုံးလွှမ်းရန် အမြင့်သတ်မှတ်သည် */
             border: 1px solid #ddd;
-            /* ဘောင်အနားသတ် */
             border-radius: 8px;
             overflow: hidden;
             display: block;
             margin-top: 20px;
         }
 
-        /* Footer */
         .footer-info {
             margin-top: 30px;
             font-size: 0.9em;
             color: #666;
+        }
+
+        /* New Section Title Style */
+        .section-title {
+            text-align: left;
+            font-size: 1.5em;
+            color: #333;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
         }
     </style>
 </head>
@@ -66,8 +67,20 @@
         </p>
         <hr>
 
-        <iframe src="https://status.kmtechspaceship.site/status/ook-site-status" width="100%" height="850px"
-            frameborder="0" title="Global HR Site Status">
+        <h2 class="section-title">၁။ အဓိက ဝန်ဆောင်မှု အခြေအနေ အကျဉ်းချုပ် (Overall Status)</h2>
+        <iframe src="https://status.kmtechspaceship.site/status/ook-site-status" class="uptime-kuma-iframe"
+            style="height: 450px;" /* Simple Status View အတွက် height လျှော့ချသည် */ frameborder="0"
+            title="Global HR Site Status Summary" allowfullscreen>
+        </iframe>
+
+        <h2 class="section-title">၂။ အသေးစိတ် စွမ်းဆောင်ရည်နှင့် Logs မှတ်တမ်းများ (Detailed Performance)</h2>
+        <p style="text-align: left; color: #555;">(ဤအပိုင်းတွင် Response Time Graph နှင့် Down/Up ဖြစ်စဉ်များ၏ Log
+            မှတ်တမ်းများကို မြင်တွေ့ရမည်။)</p>
+
+        <iframe /* URL: /monitor/1 သည် သင့် Monitor ID ကို ညွှန်းပါသည် */
+            src="https://status.kmtechspaceship.site/monitor/1" class="uptime-kuma-iframe" style="height: 900px;" /*
+            Detailed View အတွက် height ပိုပေးရပါမည် */ frameborder="0" title="Global HR Detailed Monitor Logs"
+            allowfullscreen>
         </iframe>
 
         <p class="footer-info">
