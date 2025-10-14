@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="my">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>KM Tech Status - ဝန်ဆောင်မှု အခြေအနေ</title>
+
+    <style>
+        /* HTML BODY အတွက် Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            /* အနောက်ခံ အရောင်နု */
+        }
+
+        /* Status Container (Layout) */
+        .status-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            /* အပေါ်အောက် ခြားပြီး အလယ်မှာ နေရာချသည် */
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        /* ခေါင်းစဉ် Styles */
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        /* iframe Styles */
+        .uptime-kuma-iframe {
+            width: 100%;
+            height: 850px;
+            /* မျက်နှာပြင် အများစုကို ဖုံးလွှမ်းရန် အမြင့်သတ်မှတ်သည် */
+            border: 1px solid #ddd;
+            /* ဘောင်အနားသတ် */
+            border-radius: 8px;
+            overflow: hidden;
+            display: block;
+            margin-top: 20px;
+        }
+
+        /* Footer */
+        .footer-info {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="status-container">
+
+        <h1>KM Tech Spaceship Service Uptime Report</h1>
+        <p>ဤနေရာတွင် ကျွန်ုပ်တို့၏ ဝန်ဆောင်မှုများ၏ အချိန်နှင့်တပြေးညီ အခြေအနေနှင့် မှတ်တမ်းများကို ကြည့်ရှုနိုင်ပါသည်။
+        </p>
+        <hr>
+
+        <iframe src="http://kmtechspaceshipt.site:3001/status/ook-site-status" width="100%" height="850px"
+            frameborder="0" title="Global HR Site Status">
+        </iframe>
+
+        <p class="footer-info">
+            Data provided by Uptime Kuma. Last updated:
+            <script>document.write(new Date().toLocaleString());</script>
+        </p>
+
+    </div>
+
+</body>
+
+</html>
