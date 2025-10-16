@@ -81,21 +81,19 @@
             <!-- Color 1 Input -->
             <div class="input-group">
                 <label for="color1" class="block text-sm font-medium text-gray-700 mb-1">ပထမအရောင် (Hex Code)</label>
-                <input type="text" id="color1" value="FFC069" maxlength="6"
+                <input type="text" id="color1" value="FFC069" maxlength="7"
                     class="w-full pl-3 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-lg uppercase"
-                    placeholder="ဥပမာ: FFC069" oninput="validateHex(this)">
-                <input type="color" id="colorPicker1" class="color-input" value="#FFC069"
-                    oninput="updateHexInput(this, 'color1')">
+                    placeholder="ဥပမာ: #FFC069" autocomplete="off">
+                <input type="color" id="colorPicker1" class="color-input" value="#FFC069">
             </div>
 
             <!-- Color 2 Input -->
             <div class="input-group">
                 <label for="color2" class="block text-sm font-medium text-gray-700 mb-1">ဒုတိယအရောင် (Hex Code)</label>
-                <input type="text" id="color2" value="3F6BE6" maxlength="6"
+                <input type="text" id="color2" value="3F6BE6" maxlength="7"
                     class="w-full pl-3 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-lg uppercase"
-                    placeholder="ဥပမာ: 3F6BE6" oninput="validateHex(this)">
-                <input type="color" id="colorPicker2" class="color-input" value="#3F6BE6"
-                    oninput="updateHexInput(this, 'color2')">
+                    placeholder="ဥပမာ: #3F6BE6" autocomplete="off">
+                <input type="color" id="colorPicker2" class="color-input" value="#3F6BE6">
             </div>
         </div>
 
@@ -161,7 +159,8 @@
 
             <!-- Error Message -->
             <div id="errorBox" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden">
-                <p>⚠️ Hex Code သည် ၆ လုံး (ဥပမာ: FFC069) ဖြစ်ရပါမည်။</p>
+                <p>⚠️ Hex Code သည် ၆ လုံး (ဥပမာ: FFC069) ဖြစ်ရပါမည်။ # ကို ချန်လှပ်၍လည်းကောင်း၊ # ဖြင့်လည်းကောင်း
+                    ထည့်နိုင်ပါသည်။</p>
             </div>
         </div>
     </div>
@@ -169,7 +168,9 @@
     <script>
         // DOM Elements
         const color1Input = document.getElementById('color1');
-        const color2Input = document.getElementById('colorPicker2'); // Using color picker for initial value setup
+        const colorPicker1 = document.getElementById('colorPicker1');
+        const color2Input = document.getElementById('color2');
+        const colorPicker2 = document.getElementById('colorPicker2');
 
         const swatch1 = document.getElementById('swatch1');
         const swatch2 = document.getElementById('swatch2');
@@ -178,36 +179,50 @@
         const messageBox = document.getElementById('messageBox');
         const errorBox = document.getElementById('errorBox');
 
-        // Initial setup to match the example
-        mixColors();
-
-        // Hex Code Validation and Real-time Swatch Update
-        function validateHex(input) {
-            // Remove '#' and allow only A-F, 0-9
-            input.value = input.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-
-            // Update associated color picker and swatch in real-time
-            const hexValue = input.value;
-            const swatchId = input.id === 'color1' ? 'swatch1' : 'swatch2';
-            const pickerId = input.id === 'color1' ? 'colorPicker1' : 'colorPicker2';
-
-            if (hexValue.length === 6) {
-                document.getElementById(swatchId).style.backgroundColor = `#${hexValue}`;
-                document.getElementById(pickerId).value = `#${hexValue}`;
-                errorBox.classList.add('hidden');
+        // Helper: Clean Hex string (removes '#' and validates length)
+        function getCleanHex(inputElement) {
+            let value = inputElement.value.toUpperCase().replace(/[^0-9A-F#]/g, '');
+            if (value.startsWith('#')) {
+                value = value.substring(1);
             }
+            if (value.length !== 6) {
+                return null;
+            }
+            return value;
         }
 
-        // Update Text Input when Color Picker is used
-        function updateHexInput(picker, inputId) {
-            const hexValue = picker.value.substring(1).toUpperCase();
-            document.getElementById(inputId).value = hexValue;
-            validateHex(document.getElementById(inputId));
+        // Helper: Update associated elements (swatch and picker)
+        function syncElements(sourceInput, targetPicker, targetSwatch) {
+            const cleanHex = getCleanHex(sourceInput);
+            const hexWithHash = cleanHex ? `#${cleanHex}` : '#000000';
+
+            targetPicker.value = hexWithHash;
+            targetSwatch.style.backgroundColor = hexWithHash;
+
+            // Also ensure the text input displays the value correctly (with or without #)
+            // It is slightly better to leave the user input as is for less disruption, 
+            // but for consistency, we'll strip non-hex characters except #.
+            let displayValue = sourceInput.value.toUpperCase();
+            sourceInput.value = displayValue.replace(/[^0-9A-F#]/g, '').substring(0, 7);
         }
 
-        // Core Blending Logic (Same as explained)
+        // Event Listeners for Text Inputs
+        color1Input.addEventListener('input', () => syncElements(color1Input, colorPicker1, swatch1));
+        color2Input.addEventListener('input', () => syncElements(color2Input, colorPicker2, swatch2));
+
+        // Event Listeners for Color Pickers
+        colorPicker1.addEventListener('input', () => {
+            color1Input.value = colorPicker1.value.toUpperCase();
+            syncElements(color1Input, colorPicker1, swatch1);
+        });
+        colorPicker2.addEventListener('input', () => {
+            color2Input.value = colorPicker2.value.toUpperCase();
+            syncElements(color2Input, colorPicker2, swatch2);
+        });
+
+        // Core Blending Logic
         function blendColors(hex1, hex2) {
-            if (hex1.length !== 6 || hex2.length !== 6) return null;
+            // hex1 and hex2 are guaranteed to be 6-char strings here
 
             // 1. Convert Hex to RGB
             const r1 = parseInt(hex1.substring(0, 2), 16);
@@ -234,11 +249,15 @@
             messageBox.classList.add('hidden');
             errorBox.classList.add('hidden');
 
-            const hex1 = color1Input.value.toUpperCase();
-            const hex2 = document.getElementById('color2').value.toUpperCase();
+            // Ensure inputs are synced before processing
+            syncElements(color1Input, colorPicker1, swatch1);
+            syncElements(color2Input, colorPicker2, swatch2);
 
-            // Input Validation
-            if (hex1.length !== 6 || hex2.length !== 6) {
+            const hex1 = getCleanHex(color1Input);
+            const hex2 = getCleanHex(color2Input);
+
+            // Final Validation Check
+            if (!hex1 || !hex2) {
                 errorBox.classList.remove('hidden');
                 return;
             }
@@ -246,24 +265,12 @@
             const result = blendColors(hex1, hex2);
 
             if (result) {
-                // Update Swatches
-                swatch1.style.backgroundColor = `#${hex1}`;
-                swatch2.style.backgroundColor = `#${hex2}`;
+                // Update Swatches (already updated by syncElements, but for final result)
                 resultSwatch.style.backgroundColor = result;
-
-                // Update Result Hex Code Text
                 resultHexCode.textContent = result;
-            } else {
-                errorBox.classList.remove('hidden');
             }
         }
-        <!-- Footer -->
-        <footer class="bg-gray-800 text-white py-8">
-            <div class="max-w-6xl mx-auto px-4 text-center">
-                <p>&copy; 2025 Kaung Myat Thu. All rights reserved.</p>
-                <p class="mt-2 text-gray-400">Built with passion and modern web technologies</p>
-            </div>
-        </footer>
+
         // Function to copy text to clipboard
         function copyToClipboard(elementId) {
             const hexText = document.getElementById(elementId).textContent.substring(1); // Remove #
@@ -283,6 +290,14 @@
                 messageBox.classList.add('hidden');
             }, 3000);
         }
+
+        // Initial setup on load
+        window.addEventListener('load', () => {
+            // Ensure initial colors are displayed correctly
+            syncElements(color1Input, colorPicker1, swatch1);
+            syncElements(color2Input, colorPicker2, swatch2);
+            mixColors();
+        });
     </script>
 
 </body>
